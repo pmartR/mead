@@ -102,6 +102,12 @@ shinyServer(function(input, output) {
     }
   })
   
+  output$sample_metadata <- renderDataTable({
+    if (is.null(Scoping_only_meta())) {
+      return(NULL)
+    }
+    Scoping_only_meta()
+  })
   output$downloadOTUtable <- downloadHandler(
     filename = "OTU_Sample_Table.csv",
     content = function(file) {

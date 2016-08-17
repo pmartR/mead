@@ -13,7 +13,8 @@ shinyUI(navbarPage("preDE Analysis Tool",
                                 downloadButton('downloadOTUtable', "Download OTU table")
                               ),
                             mainPanel(
-                                 plotOutput("library_sizes")
+                                 plotOutput("library_sizes"),
+                                 dataTableOutput("sample_metadata")
                             )
                           )
                     ),
