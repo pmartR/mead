@@ -6,21 +6,18 @@ theme_set(theme_bw())
 source("https://bioconductor.org/biocLite.R")
 source("./functions/helper_functions.R")
 shinyServer(function(input, output) {
-  output$contents <- renderText({
-    inFile <- input$biom
-    if (is.null(inFile))
-      return(NULL)
-    print(inFile$datapath)
-  })
+
   #---------- BIOM -------------#
   BIOM <- reactive({
+    if(is.null(input$biom$datapath)){
+      return(NULL)
+    }
       BIOM_file <- import_biom(BIOMfilename = input$biom$datapath, 
                                refseqfilename = input$fasta$datapath, 
                                treefilename = input$tree$datapath, 
                                parseFunction = parse_taxonomy_greengenes)
     return(BIOM_file)
   })
-# print(full_data())
 
   #--------- Metadata -----------#
   Scoping_only_meta <- reactive({
@@ -53,7 +50,24 @@ shinyServer(function(input, output) {
     return(temp)
   })
   
+  # borrowed historgram function from phyloseq
+  lib_size_hist = reactive({
+    if (is.null(full_data())) {
+      return(NULL)
+    }
+    xlab = "Number of Reads (Counts)"
+    ylab = "Number of Libraries"
+    return(sums_hist(sample_sums(full_data()), xlab, ylab))
+  })
   
+  otu_sum_hist = reactive({
+    if (is.null(full_data())) {
+      return(NULL)
+    }
+    xlab = "Number of Reads (Counts)"
+    ylab = "Number of OTUs"
+    return(sums_hist(taxa_sums(full_data()), xlab, ylab))    
+  })
   #---------- Outputs -------------------------#
  
 #   output$lib_size_hist = reactive({
@@ -76,7 +90,18 @@ shinyServer(function(input, output) {
 #     }
 #     else (NULL)
 #   })
-#   
+# 
+  output$library_sizes <- renderPlot({
+    if (is.null(full_data())) {
+      return(NULL)
+    } 
+    if (!is.null(full_data())) {
+      p = lib_size_hist() + ggtitle("Library Sizes")
+      q = otu_sum_hist() + ggtitle("OTU Totals")
+      gridExtra::grid.arrange(p, q, ncol = 2)
+    }
+  })
+  
   output$downloadOTUtable <- downloadHandler(
     filename = "OTU_Sample_Table.csv",
     content = function(file) {

@@ -9,14 +9,11 @@ shinyUI(navbarPage("preDE Analysis Tool",
                                 h3("Related Files"),
                                 fileInput('biom', 'Choose BIOM File'),
                                 fileInput('fasta', 'Choose FASTA file'),
-                                fileInput('tree', 'Choose TREE file')
+                                fileInput('tree', 'Choose TREE file'),
+                                downloadButton('downloadOTUtable', "Download OTU table")
                               ),
                             mainPanel(
-                              flowLayout(
-#                                 plotOutput("lib_size_hist"),
-#                                 br(),
-                                downloadButton('downloadOTUtable', "Download OTU table")
-                              )
+                                 plotOutput("library_sizes")
                             )
                           )
                     ),
