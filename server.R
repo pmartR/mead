@@ -59,7 +59,6 @@ shinyServer(function(input, output) {
     ylab = "Number of Libraries"
     return(sums_hist(sample_sums(full_data()), xlab, ylab))
   })
-  
   otu_sum_hist = reactive({
     if (is.null(full_data())) {
       return(NULL)
@@ -68,29 +67,62 @@ shinyServer(function(input, output) {
     ylab = "Number of OTUs"
     return(sums_hist(taxa_sums(full_data()), xlab, ylab))    
   })
+  
+  #--------- Data-reactive variable lists --------------#
+  
+  rankNames = reactive({
+    rankNames = as.list(rank_names(full_data(), errorIfNULL=FALSE))
+    names(rankNames) <- rankNames
+    return(rankNames)
+  })
+  
+  variNames = reactive({
+    variNames = as.list(sample_variables(full_data(), errorIfNULL=FALSE))
+    names(variNames) <- variNames
+    return(variNames)
+  })
+  
+  vars = function(type="both", withnull=TRUE, singles=FALSE){
+    if (!type %in% c("both", "taxa", "samples")) {
+      stop("incorrect `type` specification when accessing variables for UI.")
+    }
+    returnvars = NULL
+    if (type == "samples") {
+      if (singles) {
+        returnvars <- c(list(Sample = "Sample"), variNames())
+      } else {
+        returnvars <- variNames()
+      }
+    }
+    if (type == "taxa") {
+      if (singles) {
+        returnvars <- c(rankNames(), list(OTU = "OTU"))
+      } else {
+        returnvars <- rankNames()
+      }
+    } 
+    if ( type == "both") {
+      # Include all variables
+      if (singles) {
+        returnvars <- c(rankNames(), variNames(), list(OTU = "OTU", Sample = "Sample"))
+      } else {
+        returnvars <- c(rankNames(), variNames())
+      }
+    }
+    if (withnull) {
+      # Put NULL first so that it is default when `select` not specified
+      returnvars <- c(list("NULL" = "NULL"), returnvars)
+    }
+    return(returnvars)
+  }
+  
+  # A generic selectInput UI. Plan is to pass a reactive argument to `choices`.
+  uivar = function(id, label="Variable:", choices, selected="NULL"){
+    selectInput(inputId = id, label = label, choices = choices, selected = selected)
+  }
+  
   #---------- Outputs -------------------------#
- 
-#   output$lib_size_hist = reactive({
-#     xlab = "Number of Reads (Counts)"
-#     ylab = "Number of Libraries"
-#     if (!is.null(full_data())){
-#       plot_data <- taxa_sums(full_data())
-#       p <- sums_hist(plot_data, xlab, ylab)
-#     }
-#     if (!is.null(full_data())){
-#       p <- NULL
-#     }
-#     
-#     return(p)
-#   })
-#   
-#   output$content <- renderText({
-#     if (!is.null(full_data())){
-#       print(nsamples(full_data())) 
-#     }
-#     else (NULL)
-#   })
-# 
+
   output$library_sizes <- renderPlot({
     if (is.null(full_data())) {
       return(NULL)
@@ -108,6 +140,7 @@ shinyServer(function(input, output) {
     }
     Scoping_only_meta()
   })
+  
   output$downloadOTUtable <- downloadHandler(
     filename = "OTU_Sample_Table.csv",
     content = function(file) {
@@ -115,16 +148,31 @@ shinyServer(function(input, output) {
     }
   )
   
+  #---------------- Alpha Diversity ------------------#
+  output$rich_uix_color <- renderUI({
+    selectInput("color_rich",
+                label = "Color",
+                choices = c(list("samples"), vars("samples")),
+                selected = "NULL")
+  })
+  
   output$downloadRichnessEstimates <- downloadHandler(
     filename = "alpha_diversity_estimates.csv",
     content = function(file) {
     write.csv(estimate_richness(pruned_data(), split = as.logical(input$split), measures =input$dist_measures), file)
   })
-#   
+  
   output$richness_plot <- renderPlot({
     if (!is.null(pruned_data())) {
       plot_data <- pruned_data()
-    return(plot_richness(plot_data, measures = input$dist_measures))
+      p <- plot_richness(plot_data, measures = input$dist_measures)
+    if (!is.null(input$color_rich)) {
+      p$mapping$colour <- as.symbol(input$color_rich)
+      p <- update_labels(p, list(colour = input$color_rich))
+      return(p)
+    }
+
+    return()
     }
     if (is.null(pruned_data)) {
       return(NULL)
@@ -138,6 +186,8 @@ shinyServer(function(input, output) {
         plot <- estimate_richness(plot_richness(plot_data, measures = input$dist_measures))
         ggsave(plot, filename = file, dpi = 400)
       })
+  
+  #---------------- Ordination ------------------#
   
   output$ordination_plot <- renderPlot({
     if (!is.null(pruned_data())) {
@@ -158,3 +208,5 @@ shinyServer(function(input, output) {
         ggsave(plot, filename = file, dpi = 400)
       })
 })
+
+ 

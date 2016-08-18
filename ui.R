@@ -1,6 +1,7 @@
 
 
 shinyUI(navbarPage("preDE Analysis Tool",
+                   theme = "spacelab.css",
                    tabPanel("Load Data",
                             sidebarLayout(
                               sidebarPanel(
@@ -22,7 +23,8 @@ shinyUI(navbarPage("preDE Analysis Tool",
                                 sidebarLayout(
                                   sidebarPanel(
                                     h3("Diversity"),
-                                    selectInput("dist_measures", label = "Measures", choices = c("Observed", "Simpson", "Shannon", "InvSimpson"), multiple = TRUE),
+                                    uiOutput("rich_uix_color"),
+                                    selectInput("dist_measures", label = "Measures", choices = c("Observed", "Chao1", "ACE", "Shannon", "Simpson", "InvSimpson", "Fisher"), multiple = TRUE),
                                     downloadButton('downloadDiversityImage', "Download plot"),
                                     h3("Richness"),
                                     checkboxGroupInput("split", "Split?", choices = c("TRUE", "FALSE"), selected = "TRUE"),
