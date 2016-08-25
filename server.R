@@ -9,7 +9,7 @@ shinyServer(function(input, output) {
 
   #---------- BIOM -------------#
   BIOM <- reactive({
-    if(is.null(input$biom$datapath)){
+    if (is.null(input$biom$datapath)) {
       return(NULL)
     }
       BIOM_file <- import_biom(BIOMfilename = input$biom$datapath, 
@@ -21,10 +21,10 @@ shinyServer(function(input, output) {
 
   #--------- Metadata -----------#
   Scoping_only_meta <- reactive({
-    if(is.null(input$qiime)) {
+    if (is.null(input$qiime)) {
       return(NULL)
     }
-    if(!is.null(input$qiime)) {
+    if (!is.null(input$qiime)) {
       return(import_qiime_sample_data(input$qiime$datapath))
     }
   })
@@ -68,7 +68,7 @@ shinyServer(function(input, output) {
     return(sums_hist(taxa_sums(full_data()), xlab, ylab))    
   })
   
-  #--------- Data-reactive variable lists --------------#
+  #--------- Data-reactive variable lists also borrowed from phyloseq --------------#
   
   rankNames = reactive({
     rankNames = as.list(rank_names(full_data(), errorIfNULL=FALSE))
@@ -82,7 +82,7 @@ shinyServer(function(input, output) {
     return(variNames)
   })
   
-  vars = function(type="both", withnull=TRUE, singles=FALSE){
+  vars = function(type = "both", withnull = TRUE, singles = FALSE) {
     if (!type %in% c("both", "taxa", "samples")) {
       stop("incorrect `type` specification when accessing variables for UI.")
     }
@@ -101,7 +101,7 @@ shinyServer(function(input, output) {
         returnvars <- rankNames()
       }
     } 
-    if ( type == "both") {
+    if (type == "both") {
       # Include all variables
       if (singles) {
         returnvars <- c(rankNames(), variNames(), list(OTU = "OTU", Sample = "Sample"))
@@ -116,12 +116,7 @@ shinyServer(function(input, output) {
     return(returnvars)
   }
   
-  # A generic selectInput UI. Plan is to pass a reactive argument to `choices`.
-  uivar = function(id, label="Variable:", choices, selected="NULL"){
-    selectInput(inputId = id, label = label, choices = choices, selected = selected)
-  }
-  
-  #---------- Data Selection Tab -------------------------#
+  #---------------------------------------- Load Data Tab ----------------------------------------#  
 
   output$library_sizes <- renderPlot({
     if (is.null(full_data())) {
@@ -148,29 +143,29 @@ shinyServer(function(input, output) {
     }
   )
   
-  #---------------- Filtering Diversity Tab ------------------#
-  #source("functions/kOa_filtering.R")
-
+  #---------------------------------------- kOverA Filtering Tab ----------------------------------------# 
+  
   maxSamples = reactive({
   # Create logical indicated the samples to keep, or dummy logical if nonsense input
-  if(inherits(full_data(), "phyloseq")){
+  if (inherits(full_data(), "phyloseq")) {
     return(nsamples(full_data()))
   } else {
-    # Dummy response.
     return(NULL)
   }
   })
 
   output$filter_ui_kOverA_k <- renderUI({
     numericInputRow("filter_kOverA_sample_threshold", "k",
-                 min=0, max=maxSamples(), value=kovera_k, step=1, class="col-md-12")
+                 min = 0, max = maxSamples(), value = kovera_k, step = 1, class = "col-md-12")
   })
   
   filtered_data = reactive({
+    #' On click of filter-button, filters the imported data with genefilter to k
+    #' elements that exceed A. 
     ps0 = full_data()
-    if(input$actionb_filter == 0){
+    if (input$actionb_filter == 0) {
       # Don't execute filter if filter-button has never been clicked.
-      if(inherits(ps0, "phyloseq")){
+      if (inherits(ps0, "phyloseq")) {
         return(ps0)
       } else {
         return(NULL)
@@ -178,15 +173,15 @@ shinyServer(function(input, output) {
     }
     # Isolate all filter code so that button click is required for update
     isolate({
-      if(inherits(ps0, "phyloseq")){
-          if(input$filter_kOverA_sample_threshold > 1){
+      if (inherits(ps0, "phyloseq")) {
+          if (input$filter_kOverA_sample_threshold > 1) {
             # kOverA OTU Filtering
             flist = genefilter::filterfun(
               genefilter::kOverA(input$filter_kOverA_sample_threshold,
                                  input$filter_kOverA_count_threshold, na.rm=TRUE)
             )
             koatry = try(ps0 <- filter_taxa(ps0, flist, prune=TRUE))
-            if(inherits(koatry, "try-error")){
+            if (inherits(koatry, "try-error")) {
               warning("kOverA parameters resulted in an error, kOverA filtering skipped.")
             }
           }
@@ -205,20 +200,6 @@ shinyServer(function(input, output) {
     output_phyloseq_print_html(filtered_data())
   })
 
-# Generic Function for plotting marginal histograms
-
-  lib_size_hist = reactive({
-    xlab = "Number of Reads (Counts)"
-    ylab = "Number of Libraries"
-    return(sums_hist(sample_sums(full_data()), xlab, ylab))
-  })
-
-  otu_sum_hist = reactive({
-    xlab = "Number of Reads (Counts)"
-    ylab = "Number of OTUs"
-    return(sums_hist(taxa_sums(full_data()), xlab, ylab))    
-  })
-
   output$sample_variables <- renderText({return(
     paste0(sample_variables(full_data(), errorIfNULL=FALSE), collapse=", ")
   )})
@@ -231,7 +212,7 @@ shinyServer(function(input, output) {
     plib0 = lib_size_hist() + ggtitle("Original Data")
     potu0 = otu_sum_hist() + ggtitle("Original Data")
     
-    if(inherits(filtered_data(), "phyloseq")){
+    if (inherits(filtered_data(), "phyloseq")) {
       potu1 = sums_hist(taxa_sums(filtered_data()), xlab = "Number of Reads (Counts)",
                         ylab = "Number of OTUs"
       ) + 
@@ -247,7 +228,7 @@ shinyServer(function(input, output) {
   })
   
   
-  #---------------- Alpha Diversity Tab ------------------#
+  #---------------------------------------- Alpha Diversity Tab ----------------------------------------# 
   output$rich_uix_color <- renderUI({
     selectInput("color_rich",
                 label = "Color",
@@ -284,7 +265,7 @@ shinyServer(function(input, output) {
         ggsave(plot, filename = file, dpi = 400)
       })
   
-  #---------------- Ordination Tab ------------------#
+  #---------------------------------------- Ordination Tab ----------------------------------------# 
   
   output$ordination_plot <- renderPlot({
     if (!is.null(pruned_data())) {
