@@ -121,7 +121,7 @@ shinyServer(function(input, output) {
     selectInput(inputId = id, label = label, choices = choices, selected = selected)
   }
   
-  #---------- Outputs -------------------------#
+  #---------- Data Selection Tab -------------------------#
 
   output$library_sizes <- renderPlot({
     if (is.null(full_data())) {
@@ -148,7 +148,106 @@ shinyServer(function(input, output) {
     }
   )
   
-  #---------------- Alpha Diversity ------------------#
+  #---------------- Filtering Diversity Tab ------------------#
+  #source("functions/kOa_filtering.R")
+
+  maxSamples = reactive({
+  # Create logical indicated the samples to keep, or dummy logical if nonsense input
+  if(inherits(full_data(), "phyloseq")){
+    return(nsamples(full_data()))
+  } else {
+    # Dummy response.
+    return(NULL)
+  }
+  })
+
+  output$filter_ui_kOverA_k <- renderUI({
+    numericInputRow("filter_kOverA_sample_threshold", "k",
+                 min=0, max=maxSamples(), value=kovera_k, step=1, class="col-md-12")
+  })
+  
+  filtered_data = reactive({
+    ps0 = full_data()
+    if(input$actionb_filter == 0){
+      # Don't execute filter if filter-button has never been clicked.
+      if(inherits(ps0, "phyloseq")){
+        return(ps0)
+      } else {
+        return(NULL)
+      }
+    }
+    # Isolate all filter code so that button click is required for update
+    isolate({
+      if(inherits(ps0, "phyloseq")){
+          if(input$filter_kOverA_sample_threshold > 1){
+            # kOverA OTU Filtering
+            flist = genefilter::filterfun(
+              genefilter::kOverA(input$filter_kOverA_sample_threshold,
+                                 input$filter_kOverA_count_threshold, na.rm=TRUE)
+            )
+            koatry = try(ps0 <- filter_taxa(ps0, flist, prune=TRUE))
+            if(inherits(koatry, "try-error")){
+              warning("kOverA parameters resulted in an error, kOverA filtering skipped.")
+            }
+          }
+        return(ps0)
+      } else {
+        return(NULL)
+      }
+    })
+  })
+  
+  output$contents <- renderUI({
+  output_phyloseq_print_html(full_data())
+  })
+
+  output$filtered_contents <- renderUI({
+    output_phyloseq_print_html(filtered_data())
+  })
+
+# Generic Function for plotting marginal histograms
+
+  lib_size_hist = reactive({
+    xlab = "Number of Reads (Counts)"
+    ylab = "Number of Libraries"
+    return(sums_hist(sample_sums(full_data()), xlab, ylab))
+  })
+
+  otu_sum_hist = reactive({
+    xlab = "Number of Reads (Counts)"
+    ylab = "Number of OTUs"
+    return(sums_hist(taxa_sums(full_data()), xlab, ylab))    
+  })
+
+  output$sample_variables <- renderText({return(
+    paste0(sample_variables(full_data(), errorIfNULL=FALSE), collapse=", ")
+  )})
+  
+  output$rank_names <- renderText({return(
+    paste0(rank_names(full_data(), errorIfNULL=FALSE), collapse=", ")
+  )})
+  
+  output$filter_summary_plot <- renderPlot({
+    plib0 = lib_size_hist() + ggtitle("Original Data")
+    potu0 = otu_sum_hist() + ggtitle("Original Data")
+    
+    if(inherits(filtered_data(), "phyloseq")){
+      potu1 = sums_hist(taxa_sums(filtered_data()), xlab = "Number of Reads (Counts)",
+                        ylab = "Number of OTUs"
+      ) + 
+        ggtitle("Filtered Data")
+      plib1 = sums_hist(sample_sums(filtered_data()), xlab = "Number of Reads (Counts)",
+                        ylab = "Number of Libraries"
+      ) + 
+        ggtitle("Filtered Data")
+    } else {
+      potu1 = plib1 = fail_gen()
+    }
+    gridExtra::grid.arrange(plib0, potu0, plib1, potu1, ncol=2) #, main="Histograms: Before and After Filtering")
+  })
+  
+  
+  #---------------- Alpha Diversity Tab ------------------#
   output$rich_uix_color <- renderUI({
     selectInput("color_rich",
                 label = "Color",
@@ -159,7 +258,7 @@ shinyServer(function(input, output) {
   output$downloadRichnessEstimates <- downloadHandler(
     filename = "alpha_diversity_estimates.csv",
     content = function(file) {
-    write.csv(estimate_richness(pruned_data(), split = as.logical(input$split), measures =input$dist_measures), file)
+    write.csv(estimate_richness(pruned_data(), split = as.logical(input$split), measures = input$dist_measures), file)
   })
   
   output$richness_plot <- renderPlot({
@@ -171,8 +270,6 @@ shinyServer(function(input, output) {
       p <- update_labels(p, list(colour = input$color_rich))
       return(p)
     }
-
-    return()
     }
     if (is.null(pruned_data)) {
       return(NULL)
@@ -187,7 +284,7 @@ shinyServer(function(input, output) {
         ggsave(plot, filename = file, dpi = 400)
       })
   
-  #---------------- Ordination ------------------#
+  #---------------- Ordination Tab ------------------#
   
   output$ordination_plot <- renderPlot({
     if (!is.null(pruned_data())) {
