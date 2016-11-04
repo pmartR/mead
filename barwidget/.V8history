@@ -1,0 +1,6 @@
+var cf = crossfilter(diamonds)
+var price = cf.dimension(function(x){return x.price})
+var depth = cf.dimension(function(x){return x.depth})
+price.filter([2000, 3000])
+output = depth.top(10)
+JSON.stringify(output)

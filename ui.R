@@ -1,17 +1,19 @@
 # KoverA Default Filtering Settings
 kovera_A <- 0
 kovera_k <- 0
+source("./functions/helper_functions.R")
 
-shinyUI(navbarPage(title = div(img(src = "Honey_Jar.png", height = 30, width = 20),
+shinyUI(navbarPage(title = div(img(src = "Honey_Jar.png", height = 33, width = 22),
                                "mead"),
                    theme = "spacelab.css",
 #---------------------------------------- Load Data Tab ----------------------------------------#                   
                    tabPanel("Load Data",
                             sidebarLayout(
                               sidebarPanel(
+                                h3("Metadata"),
                                 fileInput('qiime', 'Choose qiime sample data'),
                                 tags$hr(),
-                                h3("Related Files"),
+                                h3("Data"),
                                 fileInput('biom', 'Choose BIOM File'),
                                 fileInput('fasta', 'Choose FASTA file'),
                                 fileInput('tree', 'Choose TREE file'),
@@ -19,6 +21,8 @@ shinyUI(navbarPage(title = div(img(src = "Honey_Jar.png", height = 30, width = 2
                               ),
                             mainPanel(
                                  plotOutput("library_sizes"),
+                                 uiOutput("plots"),
+                                 h4("Uploaded Metadata View"),
                                  dataTableOutput("sample_metadata")
                             )
                           )
@@ -34,7 +38,7 @@ shinyUI(navbarPage(title = div(img(src = "Honey_Jar.png", height = 30, width = 2
                                   fluidRow(
                                     column(width = 12,
                                                div(class = "col-md-6",
-                                                   numericInputRow("filter_kOverA_count_threshold", "A",
+                                                   numericInputRow("filter_kOverA_count_threshold", "A: Count value minimum",
                                                                    value = kovera_A, min = 0, step = 1, class = "col-md-12")), 
                                                div(class = "col-md-6", uiOutput("filter_ui_kOverA_k"))
                                     )
@@ -73,7 +77,7 @@ shinyUI(navbarPage(title = div(img(src = "Honey_Jar.png", height = 30, width = 2
                                     downloadButton('downloadRichnessEstimates', "Download csv of richness estimates")
                                     
                                   ),
-                                  mainPanel(plotOutput("richness_plot",  height = 500, width = 700))
+                                  mainPanel(plotOutput("richness_plot", width = "100%"))
                                 )
                     ),
 #---------------------------------------- Ordination Tab ----------------------------------------# 

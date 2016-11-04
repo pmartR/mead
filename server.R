@@ -2,9 +2,26 @@
 library(shiny)
 library(phyloseq)
 library(ggplot2)
+library(filterWidget)
 theme_set(theme_bw())
 source("https://bioconductor.org/biocLite.R")
 source("./functions/helper_functions.R")
+max_plots <- 100
+
+get_plot_output_list <- function(meta_data) {
+  # Insert plot output objects the list
+  input_n <- ncol(meta_data)
+  plot_output_list <- lapply(1:input_n, function(i) {
+    plotname <- paste("plot", i, sep="")
+    plot_output_object <- filterWidget::filterWidgetOutput(plotname, height = 100, width = 100)
+    plot_output_object <- renderfilterWidget({
+      filterWidget(as.character(names(meta_data)[i]), meta_data)
+    })
+  })
+  do.call(tagList, plot_output_list) # needed to display properly.
+  
+  return(plot_output_list)
+}
 shinyServer(function(input, output) {
 
   #---------- BIOM -------------#
@@ -142,8 +159,26 @@ shinyServer(function(input, output) {
       write.csv(otu_table(full_data()), file)
     }
   )
+  # Insert the right number of plot output objects into the web page
   
+  observeEvent(Scoping_only_meta(), {
+    output$plots <- renderUI({ get_plot_output_list(Scoping_only_meta()) })
+  })
+# Get subset based on selection
+ 
+ #co2_subset <- prune_samples(sample_names(full_data()) %in% event.data$X.SampleID, full_data())
+ 
+ output$metatable <- renderTable({
+
+   return(event.data())
+ })
+
+  # If NULL dont do anything
+ # if(is.null(event.data) == T) return(NULL)
   #---------------------------------------- kOverA Filtering Tab ----------------------------------------# 
+  
+
+  kovera_k <- 0
   
   maxSamples = reactive({
   # Create logical indicated the samples to keep, or dummy logical if nonsense input
@@ -155,7 +190,7 @@ shinyServer(function(input, output) {
   })
 
   output$filter_ui_kOverA_k <- renderUI({
-    numericInputRow("filter_kOverA_sample_threshold", "k",
+    numericInputRow("filter_kOverA_sample_threshold", "k: number of samples in which a taxa exceeded A",
                  min = 0, max = maxSamples(), value = kovera_k, step = 1, class = "col-md-12")
   })
   
@@ -224,7 +259,7 @@ shinyServer(function(input, output) {
     } else {
       potu1 = plib1 = fail_gen()
     }
-    gridExtra::grid.arrange(plib0, potu0, plib1, potu1, ncol=2) #, main="Histograms: Before and After Filtering")
+    gridExtra::grid.arrange(plib0, potu0, plib1, potu1, ncol=2) 
   })
   
   
