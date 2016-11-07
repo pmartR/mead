@@ -17,7 +17,6 @@ HTMLWidgets.widget({
           }
 
             var arr = x.dataset[x.colName];
-            var o_converter = d3.scale.ordinal();
             function binner(ars) {
                 var a = [], b = [], prev;
 
@@ -34,11 +33,7 @@ HTMLWidgets.widget({
 
                 return [a, b];
             }
-            console.log(toType(arr[1]));
-            console.log(binner(arr));
-            console.log(x.dataset);
-            console.log(x.colName);
-            console.log(x.dataset[x.colName]);
+
             var bins = d3.layout.histogram()  // create layout object
                 .bins(10)
                 (arr);          // group the data into the bins
@@ -47,53 +42,69 @@ HTMLWidgets.widget({
             for (i=0; i < bins.length; i++){
               counts[i] = bins[i].y;
             }
-            if (toType(arr[1]) == "string"){
-              counts = binner(arr)[1];
-            }
+
             var bin_labs = [];
             for (i=0; i < bins.length; i++){
-              bin_labs[i] = bins[i].x;
+              bin_labs[i] = Math.round(bins[i].x*1000)/1000;
             }
-            console.log(bin_labs);
-            console.log(counts);
+
+            if (toType(arr[1]) == "string"){
+              tallies = binner(arr);
+              counts = tallies[1];
+              bin_labs = tallies[0];
+            }
+
             var binDat = [];
-            for (i=0; i < bins.length; i++){
+            for (i=0; i < bin_labs.length; i++){
               binDat.push({
-                key: bin_labs[i],
-                value: counts[i]
+                bin_labels: bin_labs[i],
+                bin_counts: counts[i]
               });
             }
-            console.log(binDat);
+
 
         // if the chart does not exist, create it via c3.generate
         if(chart===null){
             chart = c3.generate({
               // specify the container element we want the chart to render in
                 bindto: el,
+
                 data: {
                       // intialize with an empty array
-                   columns: [
-                     counts,
-                   ],
+                  json: binDat,
+                  keys: {
+                    x: 'bin_labels',
+                    value: ['bin_counts'],
+                  },
                     // set chart types
-                    type: 'bar',
+                  type: 'bar',
+
                 },
-                axes: {
-                  counts: bin_labs,
-                },
+                 legend: {
+                    show: false
+                  },
                 axis: {
+                  x: {
+                    type: 'category',
+                  },
                   y: {
-                    label: x.colName,
+                    label: {
+                      text: x.colName,
+                      position: 'outer-middle'
+                    }
                   }
                 },
                 // display a subchart - this will be used for brushing in a later stage
                 subchart: {
-                    show: true
+                    show: true,
+                    //onbrush: function (domain) {
+                      //console.log(this, domain);
+                    //}
                 }
             });
             el.chart = chart;
         }
-        el.chart.load({columns: ['y', counts]});
+        el.chart.load(binDat);
 
 
 

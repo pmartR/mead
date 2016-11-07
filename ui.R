@@ -17,6 +17,9 @@ shinyUI(navbarPage(title = div(img(src = "Honey_Jar.png", height = 33, width = 2
                                 fileInput('biom', 'Choose BIOM File'),
                                 fileInput('fasta', 'Choose FASTA file'),
                                 fileInput('tree', 'Choose TREE file'),
+                                actionButton('go_button','Begin Analysis', icon = icon("flash")),
+                                br(),
+                                br(),
                                 downloadButton('downloadOTUtable', "Download OTU table")
                               ),
                             mainPanel(

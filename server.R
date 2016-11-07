@@ -22,10 +22,11 @@ get_plot_output_list <- function(meta_data) {
   
   return(plot_output_list)
 }
+
 shinyServer(function(input, output) {
 
   #---------- BIOM -------------#
-  BIOM <- reactive({
+  BIOM <- eventReactive( input$go_button, {
     if (is.null(input$biom$datapath)) {
       return(NULL)
     }

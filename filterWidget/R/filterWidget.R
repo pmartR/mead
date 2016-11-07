@@ -5,7 +5,7 @@
 #' @import htmlwidgets
 #'
 #' @export
-filterWidget <- function(colName, dataset = data.frame(GridCell = c("A", "B", "C", "D"),
+filterWidget <- function(colName = "GridCell", dataset = data.frame(GridCell = c("A", "B", "C", "D"),
                                            Total = c(5,5,4,1)), width = NULL, height = NULL) {
 
   # forward options using x
