@@ -59,6 +59,27 @@ HTMLWidgets.widget({
             .attr("transform", "translate(0," + h + ")")
             .call(d3.axisBottom(x));
 
+        svg.append("g")
+          .attr("class", "brush")
+          .call(d3.brushX()
+              .extent([[0, 0], [w, h + margin.top]])
+              .on("end", brushended));
+
+        function brushended() {
+          if (!d3.event.sourceEvent) return; // Only transition after input.
+          if (!d3.event.selection) return; // Ignore empty selections.
+          var d0 = d3.event.selection.map(x.invert),
+              d1 = d0.map(d3.format(".1f"));
+
+          // If empty when rounded, use floor & ceil instead.
+          // if (d1[0] >= d1[1]) {
+          //   d1[0] = d3.timeDay.floor(d0[0]);
+          //   d1[1] = d3.timeDay.offset(d1[0]);
+          // }
+
+          d3.select(this).transition().call(d3.event.target.move, d1.map(x));
+        }
+
 
         // at this stage the chart always exists
         // get difference in keys
