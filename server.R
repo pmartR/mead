@@ -1,4 +1,3 @@
-
 library(shiny)
 library(phyloseq)
 library(ggplot2)
@@ -6,64 +5,45 @@ library(filterWidget)
 theme_set(theme_bw())
 source("https://bioconductor.org/biocLite.R")
 source("./functions/helper_functions.R")
-max_plots <- 100
-
-get_plot_output_list <- function(meta_data) {
-  # Insert plot output objects the list
-  input_n <- ncol(meta_data)
-  plot_output_list <- lapply(1:input_n, function(i) {
-    plotname <- paste("plot", i, sep="")
-    plot_output_object <- filterWidget::filterWidgetOutput(plotname, height = 100, width = 100)
-    plot_output_object <- renderfilterWidget({
-      filterWidget(as.character(names(meta_data)[i]), meta_data)
-    })
-  })
-  do.call(tagList, plot_output_list) # needed to display properly.
-  
-  return(plot_output_list)
-}
 
 shinyServer(function(input, output) {
 
   #---------- BIOM -------------#
-  BIOM <- eventReactive( input$go_button, {
+  biom_obj <- eventReactive(input$go_button, {
     if (is.null(input$biom$datapath)) {
       return(NULL)
-    }
+    }else{
       BIOM_file <- import_biom(BIOMfilename = input$biom$datapath, 
                                refseqfilename = input$fasta$datapath, 
                                treefilename = input$tree$datapath, 
                                parseFunction = parse_taxonomy_greengenes)
-    return(BIOM_file)
+      return(BIOM_file)
+    }
   })
 
   #--------- Metadata -----------#
-  Scoping_only_meta <- reactive({
+  metadata_obj <- reactive({
     if (is.null(input$qiime)) {
       return(NULL)
-    }
-    if (!is.null(input$qiime)) {
+    }else{
       return(import_qiime_sample_data(input$qiime$datapath))
     }
   })
+  
   #--------- Merge BIOM and Metadata -----------#
   full_data <- reactive({
-    if (is.null(c(BIOM(),Scoping_only_meta()))) {
+    if (any(is.null(c(biom_obj(),metadata_obj())))) {
       return(NULL)
-    }
-    if (!is.null(c(BIOM(),Scoping_only_meta()))) {
-      return(merge_phyloseq(BIOM(), Scoping_only_meta()))
-    }
+    }else{return(merge_phyloseq(biom_obj(), metadata_obj()))}
   })
 
   #--------- Prune for alpha diversity -----------#
   pruned_data <- reactive({
-    if (!is.null(full_data())) {
-      dat <- full_data()
-      temp <- prune_taxa(taxa_sums(dat) > 0, dat)
-    }
     if (is.null(full_data())) {
       temp <- NULL
+    }else{
+      dat <- full_data()
+      temp <- prune_taxa(taxa_sums(dat) > 0, dat)
     }
     return(temp)
   })
@@ -72,18 +52,20 @@ shinyServer(function(input, output) {
   lib_size_hist = reactive({
     if (is.null(full_data())) {
       return(NULL)
-    }
+    }else{
     xlab = "Number of Reads (Counts)"
     ylab = "Number of Libraries"
     return(sums_hist(sample_sums(full_data()), xlab, ylab))
+    }
   })
   otu_sum_hist = reactive({
     if (is.null(full_data())) {
       return(NULL)
+    }else{
+      xlab = "Number of Reads (Counts)"
+      ylab = "Number of OTUs"
+      return(sums_hist(taxa_sums(full_data()), xlab, ylab))    
     }
-    xlab = "Number of Reads (Counts)"
-    ylab = "Number of OTUs"
-    return(sums_hist(taxa_sums(full_data()), xlab, ylab))    
   })
   
   #--------- Data-reactive variable lists also borrowed from phyloseq --------------#
@@ -139,20 +121,26 @@ shinyServer(function(input, output) {
   output$library_sizes <- renderPlot({
     if (is.null(full_data())) {
       return(NULL)
-    } 
-    if (!is.null(full_data())) {
+    }else{
       p = lib_size_hist() + ggtitle("Library Sizes")
       q = otu_sum_hist() + ggtitle("OTU Totals")
       gridExtra::grid.arrange(p, q, ncol = 2)
-    }
+    } 
   })
   
-  output$sample_metadata <- renderDataTable({
-    if (is.null(Scoping_only_meta())) {
-      return(NULL)
-    }
-    Scoping_only_meta()
-  })
+  output$sample_metadata <- DT::renderDataTable(
+    # if (is.null(metadata_obj())) {
+    #   return(NULL)
+    # } else{
+      data.frame(metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
+      options = list(columnDefs = list(list(
+        targets = c(1:5),
+        render = JS(
+          "function(data, type, row, meta) {",
+          "return type === 'display' && data.length > 10 ?",
+          "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
+          "}")
+      ))), callback = JS('table.page(3).draw(false);'))
   
   output$downloadOTUtable <- downloadHandler(
     filename = "OTU_Sample_Table.csv",
@@ -160,29 +148,26 @@ shinyServer(function(input, output) {
       write.csv(otu_table(full_data()), file)
     }
   )
-  # Insert the right number of plot output objects into the web page
+  # Insert the right number of metadata plot output objects into the web page
   
-  observeEvent(Scoping_only_meta(), {
-    output$plots <- renderUI({ get_plot_output_list(Scoping_only_meta()) })
+  observeEvent(metadata_obj(), {
+    output$plots <- renderUI({ get_plot_output_list(metadata_obj()) })
   })
 # Get subset based on selection
- 
- #co2_subset <- prune_samples(sample_names(full_data()) %in% event.data$X.SampleID, full_data())
+
  
  output$metatable <- renderTable({
 
    return(event.data())
  })
 
-  # If NULL dont do anything
- # if(is.null(event.data) == T) return(NULL)
   #---------------------------------------- kOverA Filtering Tab ----------------------------------------# 
   
 
   kovera_k <- 0
   
   maxSamples = reactive({
-  # Create logical indicated the samples to keep, or dummy logical if nonsense input
+  # Create logical indicating the samples to keep, or dummy logical if nonsense input
   if (inherits(full_data(), "phyloseq")) {
     return(nsamples(full_data()))
   } else {
