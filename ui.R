@@ -24,7 +24,7 @@ shinyUI(navbarPage(title = div(img(src = "Honey_Jar.png", height = 33, width = 2
                               ),
                             mainPanel(
                                  plotOutput("library_sizes"),
-                                 uiOutput("plots"),
+                                 #uiOutput("plots"),
                                  h4("Uploaded Metadata View"),
                                  dataTableOutput("sample_metadata")
                             )
