@@ -8,11 +8,6 @@ dependencies:
   version: 4.3.0
   src: htmlwidgets/lib/d3
   script: ./d3.v4.min.js
-- name: filterWidget
-  version: 1.0
-  src: htmlwidgets/
-  script: ./
-  style: ./filterWidget.css
 #- name: c3
 #  version: 0.4.10
 #  src: htmlwidgets/lib/c3
