@@ -26,7 +26,10 @@ shinyServer(function(input, output) {
     if (is.null(input$qiime)) {
       return(NULL)
     }else{
-      return(import_qiime_sample_data(input$qiime$datapath))
+      temp <- import_qiime_sample_data(input$qiime$datapath)
+      inds <- lapply(temp, function(x) sum(is.na(x)) == length(x) )
+      results <- temp[,!(unlist(inds))]
+      return(results)
     }
   })
   
@@ -134,7 +137,7 @@ shinyServer(function(input, output) {
     # } else{
     data.frame(metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
     options = list(columnDefs = list(list(
-      targets = c(1:5),
+      targets = c(1:(ncol(metadata_obj())-1)),
       render = JS(
         "function(data, type, row, meta) {",
         "return type === 'display' && data.length > 10 ?",
