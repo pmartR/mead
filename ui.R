@@ -94,3 +94,4 @@ shinyUI(navbarPage(title = div(img(src = "Honey_Jar.png", height = 33, width = 2
                    )
                    
 ))
+

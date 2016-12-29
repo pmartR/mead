@@ -2,6 +2,7 @@ library(shiny)
 library(phyloseq)
 library(ggplot2)
 library(filterWidget)
+library(DT)
 theme_set(theme_bw())
 source("https://bioconductor.org/biocLite.R")
 source("./functions/helper_functions.R")
@@ -132,9 +133,9 @@ shinyServer(function(input, output) {
   })
   
   output$sample_metadata <- DT::renderDataTable(
-    # if (is.null(metadata_obj())) {
-    #   return(NULL)
-    # } else{
+     # if (is.null(metadata_obj())) {
+     #   return(NULL)
+     # }
     data.frame(metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
     options = list(columnDefs = list(list(
       targets = c(1:(ncol(metadata_obj())-1)),
@@ -151,18 +152,12 @@ shinyServer(function(input, output) {
       write.csv(otu_table(full_data()), file)
     }
   )
-  # Insert the right number of metadata plot output objects into the web page
   
+  # Insert the right number of metadata plot output objects into the web page
   observeEvent(metadata_obj(), {
     output$plots <- renderUI({ get_plot_output_list(metadata_obj()) })
   })
-  # Get subset based on selection
   
-  
-  output$metatable <- renderTable({
-    
-    return(event.data())
-  })
   
   #---------------------------------------- kOverA Filtering Tab ----------------------------------------# 
   
