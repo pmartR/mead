@@ -132,20 +132,19 @@ shinyServer(function(input, output) {
     } 
   })
   
-  output$sample_metadata <- DT::renderDataTable(
-     # if (is.null(metadata_obj())) {
-     #   return(NULL)
-     # }
-    data.frame(metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
-    options = list(columnDefs = list(list(
-      targets = c(1:(ncol(metadata_obj())-1)),
-      render = JS(
-        "function(data, type, row, meta) {",
-        "return type === 'display' && data.length > 10 ?",
-        "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
-        "}")
-    ))), callback = JS('table.page(3).draw(false);'))
-  
+  observeEvent(input$qiime, 
+    output$sample_metadata <- DT::renderDataTable(
+      data.frame(metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
+      options = list(columnDefs = list(list(
+        targets = c(1:(ncol(metadata_obj()) - 1)),
+        render = JS(
+          "function(data, type, row, meta) {",
+          "return type === 'display' && data.length > 10 ?",
+          "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
+          "}")
+      ))), callback = JS('table.page(3).draw(false);'))
+  )
+
   output$downloadOTUtable <- downloadHandler(
     filename = "OTU_Sample_Table.csv",
     content = function(file) {
