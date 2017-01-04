@@ -78,13 +78,14 @@ HTMLWidgets.widget({
               .attr("transform", function(d) { return rotate ? "rotate(45)" : ""; })
               .style("text-anchor", function(d) { return rotate ? "start" : ""; });
 
-        svg.append("g")
+      var brush = d3.brushX()
+          .extent([[0, 0], [w, h]])
+          .on("end", brushended);
+
+      svg.append("g")
           .attr("class", "brush")
           .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
-          .call(d3.brushX()
-
-              .extent([[0, 0], [w, h]])
-              .on("end", brushended));
+          .call(brush);
 
         function brushended() {
           if (!d3.event.sourceEvent) return; // Only transition after input.
