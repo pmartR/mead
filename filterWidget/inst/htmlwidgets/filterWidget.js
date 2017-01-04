@@ -5,11 +5,15 @@ HTMLWidgets.widget({
   type: 'output',
 
   factory: function(el, width, height) {
-
+    var initialized = false;
     return {
 
       renderValue: function(val) {
         var arr = val.dataset[val.colName];
+        if (!initialized) {
+          initialized = true;
+          Shiny.onInputChange("selected_data", arr);
+        }
         var ext = d3.extent(arr);
 
         var formatCount = d3.format(",.0f");
@@ -109,6 +113,7 @@ HTMLWidgets.widget({
             return arr >= d1[0] && arr <= d1[1];
           }
           if (HTMLWidgets.shinyMode) {
+              Shiny.onInputChange("selected_data", arr);
               Shiny.onInputChange("selected_data", arr.filter(checkSelection));
           }
 
