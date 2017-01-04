@@ -10,8 +10,7 @@ HTMLWidgets.widget({
 
       renderValue: function(val) {
         var arr = val.dataset[val.colName];
-
-        // console.log(arr);
+        var ext = d3.extent(arr);
 
         var formatCount = d3.format(",.0f");
 
@@ -19,6 +18,8 @@ HTMLWidgets.widget({
         w = width - margin.left - margin.right,
         h = height - margin.top - margin.bottom;
 
+        d3.select(el).append("p")
+          .text(val.colName);
         var svg = d3.select(el).append("svg")
           .style("width", width)
           .style("height", height);
@@ -27,12 +28,20 @@ HTMLWidgets.widget({
           .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
         var x = d3.scaleLinear()
-          .rangeRound([0, w]);
+          .rangeRound([0, w])
+          .domain([ext[0],ext[1]].map(Math.round));
 
         var bins = d3.histogram()
             .domain(x.domain())
-            .thresholds(x.ticks(10))
+            // .thresholds(x.ticks(10))
             (arr);
+
+        var rotate = d3.max(bins.map(function(d) {
+          return (d.x0.toString()).length;
+        })) > 1;
+
+        var xaxis = d3.axisBottom(x)
+          .ticks(bins.length);
 
         var y = d3.scaleLinear()
             .domain([0, d3.max(bins, function(d) { return d.length; })])
@@ -47,6 +56,7 @@ HTMLWidgets.widget({
         bar.append("rect")
             .attr("x", 1)
             .attr("width", x(bins[0].x1) - x(bins[0].x0) - 1)
+            // .attr("width", x(bins[0].x1) - x(bins[0].x0))
             .attr("height", function(d) { return h - y(d.length); });
 
         bar.append("text")
@@ -56,23 +66,38 @@ HTMLWidgets.widget({
             .attr("text-anchor", "middle")
             .text(function(d) { return formatCount(d.length); });
 
+        var bandwidth = bins[0].x1 - bins[0].x0;
+
         g.append("g")
             .attr("class", "axis axis--x")
             .attr("transform", "translate(0," + h + ")")
-            .call(d3.axisBottom(x));
+            .call(xaxis)
+            .selectAll("text")
+              .attr("y", function(d) { return rotate ? 5 : 10; })
+              .attr("x", function(d) { return rotate ? 9 : 0; })
+              .attr("transform", function(d) { return rotate ? "rotate(45)" : ""; })
+              .style("text-anchor", function(d) { return rotate ? "start" : ""; });
 
-        svg.append("g")
+      var brush = d3.brushX()
+          .extent([[0, 0], [w, h]])
+          .on("end", brushended);
+
+      svg.append("g")
           .attr("class", "brush")
-          .call(d3.brushX()
-              .extent([[0, 0], [w + margin.left, h + margin.top]])
-              .on("end", brushended));
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+          .call(brush);
 
         function brushended() {
           if (!d3.event.sourceEvent) return; // Only transition after input.
           if (!d3.event.selection) return; // Ignore empty selections.
           var d0 = d3.event.selection.map(x.invert),
-              d1 = d0.map(d3.format(".1f"));
+              d1 = d0.map(function(d) {
+                var dd = Math.round(d * 100);
+                var bw =  Math.round(bandwidth * 100);
+                return (Math.round(dd/bw) * bw) / 100 ;
+              });
 
+          // d1.map(x.invert);
           // If empty or too small, transition to no brush
           if (d1[0] >= d1[1]) {
             d1[0] = d1[0];

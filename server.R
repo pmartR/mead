@@ -8,7 +8,7 @@ source("https://bioconductor.org/biocLite.R")
 source("./functions/helper_functions.R")
 
 shinyServer(function(input, output) {
-  
+
   #---------- BIOM -------------#
   biom_obj <- eventReactive(input$go_button, {
     if (is.null(input$biom$datapath)) {
