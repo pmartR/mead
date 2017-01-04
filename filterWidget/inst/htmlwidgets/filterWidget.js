@@ -81,12 +81,11 @@ HTMLWidgets.widget({
       var brush = d3.brushX()
           .extent([[0, 0], [w, h]])
           .on("end", brushended);
-
-      svg.append("g")
+          
+      var theBrush = svg.append("g")
           .attr("class", "brush")
           .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
           .call(brush);
-
         function brushended() {
           if (!d3.event.sourceEvent) return; // Only transition after input.
           if (!d3.event.selection) return; // Ignore empty selections.
@@ -105,8 +104,10 @@ HTMLWidgets.widget({
           }
 
           d3.select(this).transition().call(d3.event.target.move, d1.map(x));
-        }
+          //brushed data
+          console.log(d1);
 
+        }
 
         // at this stage the chart always exists
         // get difference in keys
