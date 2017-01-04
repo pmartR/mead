@@ -1,4 +1,15 @@
 @import url("https://fonts.googleapis.com/css?family=Open+Sans:400italic,700italic,400,700");
+/* mead additions */
+.bar rect {
+  fill: steelblue;
+}
+
+.bar text {
+  fill: #fff;
+  font: 10px sans-serif;
+}
+
+
 /*!
  * bootswatch v3.3.7
  * Homepage: http://bootswatch.com

@@ -6,107 +6,113 @@ HTMLWidgets.widget({
 
   factory: function(el, width, height) {
 
-    // create an empty chart
-    var chart = null;
-
     return {
 
-      renderValue: function(x) {
-          var toType = function(obj) {
-            return ({}).toString.call(obj).match(/\s([a-zA-Z]+)/)[1].toLowerCase()
+      renderValue: function(val) {
+        var arr = val.dataset[val.colName];
+        var ext = d3.extent(arr);
+
+        var formatCount = d3.format(",.0f");
+
+        var margin = {top: 10, right: 30, bottom: 30, left: 30},
+        w = width - margin.left - margin.right,
+        h = height - margin.top - margin.bottom;
+
+        d3.select(el).append("p")
+          .text(val.colName);
+        var svg = d3.select(el).append("svg")
+          .style("width", width)
+          .style("height", height);
+
+        var g = svg.append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        var x = d3.scaleLinear()
+          .rangeRound([0, w])
+          .domain([ext[0],ext[1]].map(Math.round));
+
+        var bins = d3.histogram()
+            .domain(x.domain())
+            // .thresholds(x.ticks(10))
+            (arr);
+
+        var rotate = d3.max(bins.map(function(d) {
+          return (d.x0.toString()).length;
+        })) > 1;
+
+        var xaxis = d3.axisBottom(x)
+          .ticks(bins.length);
+
+        var y = d3.scaleLinear()
+            .domain([0, d3.max(bins, function(d) { return d.length; })])
+            .range([h, 0]);
+
+        var bar = g.selectAll(".bar")
+          .data(bins)
+          .enter().append("g")
+            .attr("class", "bar")
+            .attr("transform", function(d) { return "translate(" + x(d.x0) + "," + y(d.length) + ")"; });
+
+        bar.append("rect")
+            .attr("x", 1)
+            .attr("width", x(bins[0].x1) - x(bins[0].x0) - 1)
+            // .attr("width", x(bins[0].x1) - x(bins[0].x0))
+            .attr("height", function(d) { return h - y(d.length); });
+
+        bar.append("text")
+            .attr("dy", ".75em")
+            .attr("y", 6)
+            .attr("x", (x(bins[0].x1) - x(bins[0].x0)) / 2)
+            .attr("text-anchor", "middle")
+            .text(function(d) { return formatCount(d.length); });
+
+        var bandwidth = bins[0].x1 - bins[0].x0;
+
+        g.append("g")
+            .attr("class", "axis axis--x")
+            .attr("transform", "translate(0," + h + ")")
+            .call(xaxis)
+            .selectAll("text")
+              .attr("y", function(d) { return rotate ? 5 : 10; })
+              .attr("x", function(d) { return rotate ? 9 : 0; })
+              .attr("transform", function(d) { return rotate ? "rotate(45)" : ""; })
+              .style("text-anchor", function(d) { return rotate ? "start" : ""; });
+
+      var brush = d3.brushX()
+          .extent([[0, 0], [w, h]])
+          .on("end", brushended);
+          
+      svg.append("g")
+          .attr("class", "brush")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+          .call(brush);
+        function brushended() {
+          if (!d3.event.sourceEvent) return; // Only transition after input.
+          if (!d3.event.selection) return; // Ignore empty selections.
+          var d0 = d3.event.selection.map(x.invert),
+              d1 = d0.map(function(d) {
+                var dd = Math.round(d * 100);
+                var bw =  Math.round(bandwidth * 100);
+                return (Math.round(dd/bw) * bw) / 100 ;
+              });
+
+          // d1.map(x.invert);
+          // If empty or too small, transition to no brush
+          if (d1[0] >= d1[1]) {
+            d1[0] = d1[0];
+            d1[1] = d1[0];
           }
 
-            var arr = x.dataset[x.colName];
-            function binner(ars) {
-                var a = [], b = [], prev;
+          d3.select(this).transition().call(d3.event.target.move, d1.map(x));
+          //return brushed data
+          function checkSelection(arr) {
+            return arr >= d1[0] && arr <= d1[1];
+          }
+          if (HTMLWidgets.shinyMode) {
+              Shiny.onInputChange("selected_data", arr.filter(checkSelection));
+          }
 
-                ars.sort();
-                for ( var i = 0; i < ars.length; i++ ) {
-                    if ( ars[i] !== prev ) {
-                        a.push(ars[i]);
-                        b.push(1);
-                    } else {
-                        b[b.length-1]++;
-                    }
-                    prev = ars[i];
-                }
-
-                return [a, b];
-            }
-
-            var bins = d3.layout.histogram()  // create layout object
-                .bins(10)
-                (arr);          // group the data into the bins
-            var counts = [];
-
-            for (i=0; i < bins.length; i++){
-              counts[i] = bins[i].y;
-            }
-
-            var bin_labs = [];
-            for (i=0; i < bins.length; i++){
-              bin_labs[i] = Math.round(bins[i].x*1000)/1000;
-            }
-
-            if (toType(arr[1]) == "string"){
-              tallies = binner(arr);
-              counts = tallies[1];
-              bin_labs = tallies[0];
-            }
-
-            var binDat = [];
-            for (i=0; i < bin_labs.length; i++){
-              binDat.push({
-                bin_labels: bin_labs[i],
-                bin_counts: counts[i]
-              });
-            }
-
-
-        // if the chart does not exist, create it via c3.generate
-        if(chart===null){
-            chart = c3.generate({
-              // specify the container element we want the chart to render in
-                bindto: el,
-
-                data: {
-                      // intialize with an empty array
-                  json: binDat,
-                  keys: {
-                    x: 'bin_labels',
-                    value: ['bin_counts'],
-                  },
-                    // set chart types
-                  type: 'bar',
-
-                },
-                 legend: {
-                    show: false
-                  },
-                axis: {
-                  x: {
-                    type: 'category',
-                  },
-                  y: {
-                    label: {
-                      text: x.colName,
-                      position: 'outer-middle'
-                    }
-                  }
-                },
-                // display a subchart - this will be used for brushing in a later stage
-                subchart: {
-                    show: true,
-                    //onbrush: function (domain) {
-                      //console.log(this, domain);
-                    //}
-                }
-            });
-            el.chart = chart;
         }
-        el.chart.load(binDat);
-
-
 
         // at this stage the chart always exists
         // get difference in keys
@@ -115,6 +121,7 @@ HTMLWidgets.widget({
         //var diff     = _.difference(old_keys,new_keys);
 
         // update the data and colors
+
 
       },
       resize: function(width, height) {

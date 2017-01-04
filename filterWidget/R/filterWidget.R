@@ -41,7 +41,7 @@ filterWidget <- function(colName = "GridCell", dataset = data.frame(GridCell = c
 #' @name filterWidget-shiny
 #'
 #' @export
-filterWidgetOutput <- function(outputId, width = '100%', height = '400px'){
+filterWidgetOutput <- function(outputId, width = '300px', height = '150px'){
   htmlwidgets::shinyWidgetOutput(outputId, 'filterWidget', width, height, package = 'filterWidget')
 }
 
