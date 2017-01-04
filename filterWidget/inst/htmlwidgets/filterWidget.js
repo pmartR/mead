@@ -82,7 +82,7 @@ HTMLWidgets.widget({
           .extent([[0, 0], [w, h]])
           .on("end", brushended);
           
-      var theBrush = svg.append("g")
+      svg.append("g")
           .attr("class", "brush")
           .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
           .call(brush);
@@ -104,8 +104,13 @@ HTMLWidgets.widget({
           }
 
           d3.select(this).transition().call(d3.event.target.move, d1.map(x));
-          //brushed data
-          console.log(d1);
+          //return brushed data
+          function checkSelection(arr) {
+            return arr >= d1[0] && arr <= d1[1];
+          }
+          if (HTMLWidgets.shinyMode) {
+              Shiny.onInputChange("selected_data", arr.filter(checkSelection));
+          }
 
         }
 
