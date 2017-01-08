@@ -10,7 +10,7 @@ source("./functions/helper_functions.R")
 shinyServer(function(input, output) {
 
   #---------- BIOM -------------#
-  biom_obj <- eventReactive(input$go_button, {
+  biom_obj <- reactive({
     if (is.null(input$biom$datapath)) {
       return(NULL)
     }else{
