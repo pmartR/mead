@@ -5,16 +5,14 @@ get_plot_output_list <- function(meta_data) {
   input_n <- ncol(meta_data)
   plot_output_list <- lapply(1:input_n, function(i) {
     plotname <- paste("plot", i, sep="")
-    plot_output_object <- filterWidget::filterWidgetOutput(plotname, height = 100, width = 100)
+    plot_output_object <- filterWidget::filterWidgetOutput(plotname, height = 10, width = 20)
     plot_output_object <- renderfilterWidget({
       filterWidget(as.character(names(meta_data)[i]), meta_data)
     })
   })
   do.call(tagList, plot_output_list) # needed to display properly.
-  
   return(plot_output_list)
 }
-
 
 sums_hist = function(thesums=NULL, xlab="", ylab=""){
   if(is.null(thesums)){
