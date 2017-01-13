@@ -5,31 +5,57 @@ source("./functions/helper_functions.R")
 
 shinyUI(navbarPage(title = div(img(src = "Honey_Jar.png", height = 33, width = 22),
                                "mead"),
-                   theme = "spacelab.css",
+                   theme = "spacelab.css", 
+                   windowTitle = "mead",
+                   
                    #---------------------------------------- Load Data Tab ----------------------------------------#                   
                    tabPanel("Load Data",
+                            #wellPanel(
+                            br(),
+                            br(),
+                              wellPanel(
+                                fluidPage(
+                                  fluidRow(
+                                    column(width = 4, offset = 4, h3("Metadata"),
+                                           fileInput('qiime', 'Choose qiime sample data'))
+                                  ),
+                                  fluidRow(
+                                    column(width = 10, offset = 1, 
+                                           tags$hr(),
+                                           h3("Data"),
+                                           fluidRow(
+                                             column(width = 4, fileInput('biom', 'Choose BIOM File')),
+                                             column(width = 4, fileInput('fasta', 'Choose FASTA file')),
+                                             column(width = 4, fileInput('tree', 'Choose TREE file'))
+                                           )
+                                    )
+                                  )
+                                  
+                                  #downloadButton('downloadOTUtable', "Download OTU table")
+                                )
+                              )
+                            #)
+                            
+                            
+                    ),
+
+                   tabPanel("Metadata FIltering",
                             sidebarLayout(
                               sidebarPanel(
-                                h3("Metadata"),
-                                fileInput('qiime', 'Choose qiime sample data'),
-                                tags$hr(),
-                                h3("Data"),
-                                fileInput('biom', 'Choose BIOM File'),
-                                fileInput('fasta', 'Choose FASTA file'),
-                                fileInput('tree', 'Choose TREE file'),
-                                actionButton('go_button','Begin Analysis', icon = icon("flash")),
-                                br(),
-                                br(),
-                                downloadButton('downloadOTUtable', "Download OTU table")
+                                uiOutput("plots")
                               ),
                               mainPanel(
-                                plotOutput("library_sizes"),
-                                uiOutput("plots"),
-                                h4("Uploaded Metadata View"),
-                                dataTableOutput("sample_metadata")
+                                fluidPage(
+                                  plotOutput("library_sizes"),
+                                  h4("Uploaded Metadata View"),
+                                  dataTableOutput("sample_metadata"),
+                                  dataTableOutput("new_samples")
+                                )
                               )
                             )
+                            
                    ),
+
                    #---------------------------------------- kOverA FIltering Tab ----------------------------------------# 
                    tabPanel( "kOverA Filtering",
                              fluidPage(

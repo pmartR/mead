@@ -5,11 +5,16 @@ HTMLWidgets.widget({
   type: 'output',
 
   factory: function(el, width, height) {
-
+    var initialized = false;
     return {
 
       renderValue: function(val) {
         var arr = val.dataset[val.colName];
+        if (!initialized) {
+          initialized = true;
+          Shiny.onInputChange("selected_data", arr);
+          Shiny.onInputChange("brushed_on", val.colName);
+        }
         var ext = d3.extent(arr);
 
         var formatCount = d3.format(",.0f");
@@ -108,8 +113,18 @@ HTMLWidgets.widget({
           function checkSelection(arr) {
             return arr >= d1[0] && arr <= d1[1];
           }
+          function isInRange(arr) {
+            var indices = [], i;
+            for(i = 0; i < arr.length; i++)
+              if (arr[i] >= d1[0] && arr[i] <= d1[1])
+                indices.push(i);
+            return indices;
+          }
           if (HTMLWidgets.shinyMode) {
+              Shiny.onInputChange("selected_data", arr);
               Shiny.onInputChange("selected_data", arr.filter(checkSelection));
+              Shiny.onInputChange("selected_indices", isInRange(arr));
+              Shiny.onInputChange("brushed_on", val.colName);
           }
 
         }
