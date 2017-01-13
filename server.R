@@ -154,9 +154,23 @@ shinyServer(function(input, output) {
   
   # Insert the right number of metadata plot output objects into the web page
   observeEvent(metadata_obj(), {
+    # unique_cols <- lapply(metadata_obj(), function(x){
+    #   return(sum(duplicated(x)) == 0)
+    # })
+    #plotable_meta_data <- metadata_obj()[,-which(unlist(unique_cols))]
     output$plots <- renderUI({ get_plot_output_list(metadata_obj()) })
+    output$new_samples <- DT::renderDataTable(
+      data.frame(metadata_obj()[input$selected_indices+1, ]), rownames = FALSE, class = 'cell-border stripe compact hover',
+      options = list(columnDefs = list(list(
+        targets = c(1:(ncol(metadata_obj()) - 1)),
+        render = JS(
+          "function(data, type, row, meta) {",
+          "return type === 'display' && data.length > 10 ?",
+          "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
+          "}")
+      ))), callback = JS('table.page(3).draw(false);'))
   })
-  
+ 
   
   #---------------------------------------- kOverA Filtering Tab ----------------------------------------# 
   

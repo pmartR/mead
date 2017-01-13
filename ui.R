@@ -40,12 +40,20 @@ shinyUI(navbarPage(title = div(img(src = "Honey_Jar.png", height = 33, width = 2
                     ),
 
                    tabPanel("Metadata FIltering",
-                            fluidPage(
-                              plotOutput("library_sizes"),
-                              uiOutput("plots"),
-                              h4("Uploaded Metadata View"),
-                              dataTableOutput("sample_metadata")
+                            sidebarLayout(
+                              sidebarPanel(
+                                uiOutput("plots")
+                              ),
+                              mainPanel(
+                                fluidPage(
+                                  plotOutput("library_sizes"),
+                                  h4("Uploaded Metadata View"),
+                                  dataTableOutput("sample_metadata"),
+                                  dataTableOutput("new_samples")
+                                )
+                              )
                             )
+                            
                    ),
 
                    #---------------------------------------- kOverA FIltering Tab ----------------------------------------# 
