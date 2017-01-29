@@ -159,8 +159,16 @@ shinyServer(function(input, output) {
     # })
     #plotable_meta_data <- metadata_obj()[,-which(unlist(unique_cols))]
     output$plots <- renderUI({ get_plot_output_list(metadata_obj()) })
+    
+    new_metadata_obj <- reactive({
+        return(data.frame(metadata_obj()[input$selected_indices+1, ]))
+      })
+    if(!is.null(new_metadata_obj())){
+      output$new_plots <- renderUI({ get_plot_output_list(new_metadata_obj()) })
+      output$
+    }
     output$new_samples <- DT::renderDataTable(
-      data.frame(metadata_obj()[input$selected_indices+1, ]), rownames = FALSE, class = 'cell-border stripe compact hover',
+      data.frame(new_metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
       options = list(columnDefs = list(list(
         targets = c(1:(ncol(metadata_obj()) - 1)),
         render = JS(
@@ -169,8 +177,13 @@ shinyServer(function(input, output) {
           "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
           "}")
       ))), callback = JS('table.page(3).draw(false);'))
+
   })
- 
+  
+  # observeEvent(input$selected_indeces, {
+  #   output$new_plots <- renderUI({ get_plot_output_list(new_metadata_obj()) })
+  # })
+  # 
   
   #---------------------------------------- kOverA Filtering Tab ----------------------------------------# 
   
