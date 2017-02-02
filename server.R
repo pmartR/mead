@@ -151,7 +151,7 @@ shinyServer(function(input, output) {
       write.csv(otu_table(full_data()), file)
     }
   )
-  
+
   # Insert the right number of metadata plot output objects into the web page
   observeEvent(metadata_obj(), {
     # unique_cols <- lapply(metadata_obj(), function(x){
@@ -159,14 +159,9 @@ shinyServer(function(input, output) {
     # })
     #plotable_meta_data <- metadata_obj()[,-which(unlist(unique_cols))]
     output$plots <- renderUI({ get_plot_output_list(metadata_obj()) })
-    
     new_metadata_obj <- reactive({
-        return(data.frame(metadata_obj()[input$selected_indices+1, ]))
-      })
-    if(!is.null(new_metadata_obj())){
-      output$new_plots <- renderUI({ get_plot_output_list(new_metadata_obj()) })
-      output$
-    }
+      return(metadata_obj()[input$selected_indices+1, ])
+    })
     output$new_samples <- DT::renderDataTable(
       data.frame(new_metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
       options = list(columnDefs = list(list(
@@ -177,8 +172,13 @@ shinyServer(function(input, output) {
           "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
           "}")
       ))), callback = JS('table.page(3).draw(false);'))
+    observeEvent(input$selected_indices, {
+      output$plots <- renderUI({ get_plot_output_list(new_metadata_obj()) })
+    })
+
 
   })
+  
   
   # observeEvent(input$selected_indeces, {
   #   output$new_plots <- renderUI({ get_plot_output_list(new_metadata_obj()) })
