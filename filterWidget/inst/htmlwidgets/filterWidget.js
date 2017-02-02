@@ -12,8 +12,10 @@ HTMLWidgets.widget({
         var arr = val.dataset[val.colName];
         if (!initialized) {
           initialized = true;
-          Shiny.onInputChange("selected_data", arr);
-          Shiny.onInputChange("brushed_on", val.colName);
+          if (HTMLWidgets.shinyMode) {
+            Shiny.onInputChange("selected_data", arr);
+            Shiny.onInputChange("brushed_on", val.colName);
+          }
         }
         var ext = d3.extent(arr);
 
