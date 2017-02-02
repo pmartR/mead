@@ -48,8 +48,8 @@ shinyUI(navbarPage(title = div(img(src = "Honey_Jar.png", height = 33, width = 2
                                 fluidPage(
                                   plotOutput("library_sizes"),
                                   h4("Uploaded Metadata View"),
-                                  dataTableOutput("sample_metadata"),
-                                  dataTableOutput("new_samples"),
+                                  DT::dataTableOutput("sample_metadata"),
+                                  DT::dataTableOutput("new_samples"),
                                   uiOutput("new_plots")
                                 )
                               )
