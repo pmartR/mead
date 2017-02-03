@@ -3,11 +3,10 @@ kovera_A <- 0
 kovera_k <- 0
 source("./functions/helper_functions.R")
 
-shinyUI(navbarPage(title = div(img(src = "Honey_Jar.png", height = 33, width = 22),
-                               "mead"),
+shinyUI(navbarPage(
+  title = div(img(src = "Honey_Jar.png", height = 33, width = 22), "mead"),
                    theme = "spacelab.css", 
                    windowTitle = "mead",
-                   
                    #---------------------------------------- Load Data Tab ----------------------------------------#                   
                    tabPanel("Load Data",
                             #wellPanel(
@@ -42,15 +41,21 @@ shinyUI(navbarPage(title = div(img(src = "Honey_Jar.png", height = 33, width = 2
                    tabPanel("Metadata FIltering",
                             sidebarLayout(
                               sidebarPanel(
-                                uiOutput("plots")
+                                uiOutput("plots"),
+                                actionButton("reset_button", label = "Reset Filter", icon = icon("trash"))
                               ),
                               mainPanel(
                                 fluidPage(
                                   plotOutput("library_sizes"),
-                                  h4("Uploaded Metadata View"),
-                                  DT::dataTableOutput("sample_metadata"),
-                                  DT::dataTableOutput("new_samples"),
-                                  uiOutput("new_plots")
+                                  h3("Full Metadata"),
+                                  tags$table(
+                                    DT::dataTableOutput("sample_metadata"),
+                                             tags$head(
+                                               tags$title(h4("Uploaded Metadata View"))
+                                             )),
+                                  br(),
+                                  h3("Filtered Metadata"),
+                                  tags$table(DT::dataTableOutput("new_samples"))
                                 )
                               )
                             )

@@ -122,6 +122,8 @@ shinyServer(function(input, output) {
   
   #---------------------------------------- Load Data Tab ----------------------------------------#  
   
+
+
   output$library_sizes <- renderPlot({
     if (is.null(full_data())) {
       return(NULL)
@@ -131,6 +133,7 @@ shinyServer(function(input, output) {
       gridExtra::grid.arrange(p, q, ncol = 2)
     } 
   })
+  outputOptions(output, "library_sizes", suspendWhenHidden = FALSE)
   
   observeEvent(input$qiime, 
     output$sample_metadata <- DT::renderDataTable(
@@ -152,44 +155,44 @@ shinyServer(function(input, output) {
     }
   )
 
-  # Insert the right number of metadata plot output objects into the web page
+  #---- Charts for filtering -------#
+  
   observeEvent(metadata_obj(), {
-    # unique_cols <- lapply(metadata_obj(), function(x){
-    #   return(sum(duplicated(x)) == 0)
-    # })
-    #plotable_meta_data <- metadata_obj()[,-which(unlist(unique_cols))]
+    # If the metadata has been loaded, create the charts
     output$plots <- renderUI({ get_plot_output_list(metadata_obj()) })
+    # Return a new metadata object that will be used for filtering
     new_metadata_obj <- reactive({
-      return(metadata_obj()[input$selected_indices+1, ])
+      return(metadata_obj()[input$selected_indices + 1, ]) # add one because javascript is zero-indexed
     })
-    output$new_samples <- DT::renderDataTable(
-      data.frame(new_metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
-      options = list(columnDefs = list(list(
-        targets = c(1:(ncol(metadata_obj()) - 1)),
-        render = JS(
-          "function(data, type, row, meta) {",
-          "return type === 'display' && data.length > 10 ?",
-          "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
-          "}")
-      ))), callback = JS('table.page(3).draw(false);'))
+    # If the user brushes a chart, input$selected_indices will change
+    # If that change is observed, subset new_metadata_obj and 
+    # create subsetted charts and table
     observeEvent(input$selected_indices, {
-      output$plots <- renderUI({ get_plot_output_list(new_metadata_obj()) })
+      output$plots <- renderUI({get_plot_output_list(new_metadata_obj())})
+      output$new_samples <- DT::renderDataTable(
+        data.frame(new_metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
+        options = list(columnDefs = list(list(
+          targets = c(1:(ncol(metadata_obj()) - 1)),
+          render = JS(
+            "function(data, type, row, meta) {",
+            "return type === 'display' && data.length > 10 ?",
+            "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
+            "}")
+        ))), callback = JS('table.page(3).draw(false);'))
     })
-
-
+    # render the first charts as soon as the data becomes available
+    outputOptions(output, "plots", suspendWhenHidden = FALSE)
+    outputOptions(output, "library_sizes", suspendWhenHidden = FALSE)
+    outputOptions(output, "sample_metadata", suspendWhenHidden = FALSE)
   })
-  
-  
-  # observeEvent(input$selected_indeces, {
-  #   output$new_plots <- renderUI({ get_plot_output_list(new_metadata_obj()) })
-  # })
-  # 
-  
+#------- Reset everything or keep the filtered subset -------#
+  observeEvent(input$reset_button,{
+    new_metadata_obj <- reactive({
+      return(metadata_obj())
+    })
+  })
   #---------------------------------------- kOverA Filtering Tab ----------------------------------------# 
-  
-  
   kovera_k <- 0
-  
   maxSamples = reactive({
     # Create logical indicating the samples to keep, or dummy logical if nonsense input
     if (inherits(full_data(), "phyloseq")) {
