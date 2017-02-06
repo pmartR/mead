@@ -43,10 +43,10 @@ shinyServer(function(input, output) {
   
   #--------- Prune for alpha diversity -----------#
   pruned_data <- reactive({
-    if (is.null(full_data())) {
+    if (is.null( full_data())) {
       temp <- NULL
     }else{
-      dat <- full_data()
+      dat <-  full_data()
       temp <- prune_taxa(taxa_sums(dat) > 0, dat)
     }
     return(temp)
@@ -54,34 +54,34 @@ shinyServer(function(input, output) {
   
   # borrowed historgram function from phyloseq
   lib_size_hist = reactive({
-    if (is.null(full_data())) {
+    if (is.null( full_data())) {
       return(NULL)
     }else{
       xlab = "Number of Reads (Counts)"
       ylab = "Number of Libraries"
-      return(sums_hist(sample_sums(full_data()), xlab, ylab))
+      return(sums_hist(sample_sums( full_data()), xlab, ylab))
     }
   })
   otu_sum_hist = reactive({
-    if (is.null(full_data())) {
+    if (is.null( full_data())) {
       return(NULL)
     }else{
       xlab = "Number of Reads (Counts)"
       ylab = "Number of OTUs"
-      return(sums_hist(taxa_sums(full_data()), xlab, ylab))    
+      return(sums_hist(taxa_sums( full_data()), xlab, ylab))    
     }
   })
   
   #--------- Data-reactive variable lists also borrowed from phyloseq --------------#
   
   rankNames = reactive({
-    rankNames = as.list(rank_names(full_data(), errorIfNULL=FALSE))
+    rankNames = as.list(rank_names( full_data(), errorIfNULL=FALSE))
     names(rankNames) <- rankNames
     return(rankNames)
   })
   
   variNames = reactive({
-    variNames = as.list(sample_variables(full_data(), errorIfNULL=FALSE))
+    variNames = as.list(sample_variables( full_data(), errorIfNULL=FALSE))
     names(variNames) <- variNames
     return(variNames)
   })
@@ -125,7 +125,7 @@ shinyServer(function(input, output) {
 
 
   output$library_sizes <- renderPlot({
-    if (is.null(full_data())) {
+    if (is.null( full_data())) {
       return(NULL)
     }else{
       p = lib_size_hist() + ggtitle("Library Sizes")
@@ -186,17 +186,24 @@ shinyServer(function(input, output) {
     outputOptions(output, "sample_metadata", suspendWhenHidden = FALSE)
   })
 #------- Reset everything or keep the filtered subset -------#
-  observeEvent(input$reset_button,{
-    new_metadata_obj <- reactive({
+  new_metadata_obj <- eventReactive(input$reset_button,{
       return(metadata_obj())
-    })
   })
+  
+  #--------- Merge BIOM and Metadata -----------#
+  meta_filtered_data <- reactive({
+    return(merge_phyloseq(biom_obj(), metadata_obj())) ########TODO: this needs to be the subsetted data #########
+  })
+  
+
+  
+  
   #---------------------------------------- kOverA Filtering Tab ----------------------------------------# 
   kovera_k <- 0
   maxSamples = reactive({
     # Create logical indicating the samples to keep, or dummy logical if nonsense input
-    if (inherits(full_data(), "phyloseq")) {
-      return(nsamples(full_data()))
+    if (inherits( meta_filtered_data(), "phyloseq")) {
+      return(nsamples( meta_filtered_data()))
     } else {
       return(NULL)
     }
@@ -210,7 +217,7 @@ shinyServer(function(input, output) {
   filtered_data = reactive({
     #' On click of filter-button, filters the imported data with genefilter to k
     #' elements that exceed A. 
-    ps0 = full_data()
+    ps0 =  meta_filtered_data()
     if (input$actionb_filter == 0) {
       # Don't execute filter if filter-button has never been clicked.
       if (inherits(ps0, "phyloseq")) {
@@ -241,7 +248,7 @@ shinyServer(function(input, output) {
   })
   
   output$contents <- renderUI({
-    output_phyloseq_print_html(full_data())
+    output_phyloseq_print_html( meta_filtered_data())
   })
   
   output$filtered_contents <- renderUI({
@@ -249,11 +256,11 @@ shinyServer(function(input, output) {
   })
   
   output$sample_variables <- renderText({return(
-    paste0(sample_variables(full_data(), errorIfNULL=FALSE), collapse=", ")
+    paste0(sample_variables( meta_filtered_data(), errorIfNULL=FALSE), collapse=", ")
   )})
   
   output$rank_names <- renderText({return(
-    paste0(rank_names(full_data(), errorIfNULL=FALSE), collapse=", ")
+    paste0(rank_names( meta_filtered_data(), errorIfNULL=FALSE), collapse=", ")
   )})
   
   output$filter_summary_plot <- renderPlot({
