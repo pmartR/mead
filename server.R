@@ -156,10 +156,12 @@ shinyServer(function(input, output) {
   )
   
   #---- Charts for filtering -------#
-  
+  new_metadata_obj <- eventReactive(input$selected_indices, {
+    return(metadata_obj()[input$selected_indices + 1, ]) # initialize object
+  })
   observeEvent(metadata_obj(), {
     # If the metadata has been loaded, create the charts
-    output$plots <- renderUI({ get_plot_output_list(metadata_obj()) })
+    output$plots <- renderUI({get_plot_output_list(metadata_obj())})
     # Return a new metadata object that will be used for filtering
     new_metadata_obj <- reactive({
       return(metadata_obj()[input$selected_indices + 1, ]) # add one because javascript is zero-indexed
@@ -169,6 +171,9 @@ shinyServer(function(input, output) {
     # If that change is observed, subset new_metadata_obj and 
     # create subsetted charts and table
     observeEvent(input$selected_indices, {
+      new_metadata_obj <- reactive({
+        return(metadata_obj()[input$selected_indices + 1, ]) # add one because javascript is zero-indexed
+      })
       output$plots <- renderUI({get_plot_output_list(new_metadata_obj())})
       output$new_samples <- DT::renderDataTable(
         data.frame(new_metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
@@ -203,98 +208,96 @@ shinyServer(function(input, output) {
   
   #--------- Merge BIOM and Metadata -----------#
   meta_filtered_data <- reactive({
-    fd <- full_data()
-    md <- new_metadata_obj()
-    return(subset_samples(fd, sample_names(fd) %in% sample_names(md)))
+      return(prune_samples(as.character(sample_names(new_metadata_obj())), full_data()))
   })
-  
-  
-  
   
   #---------------------------------------- kOverA Filtering Tab ----------------------------------------# 
   kovera_k <- 0
-  maxSamples = reactive({
-    # Create logical indicating the samples to keep, or dummy logical if nonsense input
-    if (inherits( meta_filtered_data(), "phyloseq")) {
-      return(nsamples( meta_filtered_data()))
-    } else {
-      return(NULL)
-    }
-  })
-  
-  output$filter_ui_kOverA_k <- renderUI({
-    numericInputRow("filter_kOverA_sample_threshold", "k: number of samples in which a taxa exceeded A",
-                    min = 0, max = maxSamples(), value = kovera_k, step = 1, class = "col-md-12")
-  })
-  
-  filtered_data = reactive({
-    #' On click of filter-button, filters the imported data with genefilter to k
-    #' elements that exceed A. 
-    ps0 =  meta_filtered_data()
-    if (input$actionb_filter == 0) {
-      # Don't execute filter if filter-button has never been clicked.
-      if (inherits(ps0, "phyloseq")) {
-        return(ps0)
-      } else {
-        return(NULL)
-      }
-    }
-    # Isolate all filter code so that button click is required for update
-    isolate({
-      if (inherits(ps0, "phyloseq")) {
-        if (input$filter_kOverA_sample_threshold > 1) {
-          # kOverA OTU Filtering
-          flist = genefilter::filterfun(
-            genefilter::kOverA(input$filter_kOverA_sample_threshold,
-                               input$filter_kOverA_count_threshold, na.rm=TRUE)
-          )
-          koatry = try(ps0 <- filter_taxa(ps0, flist, prune=TRUE))
-          if (inherits(koatry, "try-error")) {
-            warning("kOverA parameters resulted in an error, kOverA filtering skipped.")
-          }
-        }
-        return(ps0)
+  observeEvent(input$keep_filter, {
+    maxSamples = reactive({
+      # Create logical indicating the samples to keep, or dummy logical if nonsense input
+      if (inherits( meta_filtered_data(), "phyloseq")) {
+        return(nsamples( meta_filtered_data()))
       } else {
         return(NULL)
       }
     })
-  })
-  
-  output$contents <- renderUI({
-    output_phyloseq_print_html( meta_filtered_data())
-  })
-  
-  output$filtered_contents <- renderUI({
-    output_phyloseq_print_html(filtered_data())
-  })
-  
-  output$sample_variables <- renderText({return(
-    paste0(sample_variables( meta_filtered_data(), errorIfNULL=FALSE), collapse=", ")
-  )})
-  
-  output$rank_names <- renderText({return(
-    paste0(rank_names( meta_filtered_data(), errorIfNULL=FALSE), collapse=", ")
-  )})
-  
-  output$filter_summary_plot <- renderPlot({
-    plib0 = lib_size_hist() + ggtitle("Original Data")
-    potu0 = otu_sum_hist() + ggtitle("Original Data")
     
-    if (inherits(filtered_data(), "phyloseq")) {
-      potu1 = sums_hist(taxa_sums(filtered_data()), xlab = "Number of Reads (Counts)",
-                        ylab = "Number of OTUs"
-      ) + 
-        ggtitle("Filtered Data")
-      plib1 = sums_hist(sample_sums(filtered_data()), xlab = "Number of Reads (Counts)",
-                        ylab = "Number of Libraries"
-      ) + 
-        ggtitle("Filtered Data")
-    } else {
-      potu1 = plib1 = fail_gen()
-    }
-    gridExtra::grid.arrange(plib0, potu0, plib1, potu1, ncol=2) 
+    output$filter_ui_kOverA_k <- renderUI({
+      numericInputRow("filter_kOverA_sample_threshold", "k: number of samples in which a taxa exceeded A",
+                      min = 0, max = maxSamples(), value = kovera_k, step = 1, class = "col-md-12")
+    })
+    
+    filtered_data = reactive({
+      #' On click of filter-button, filters the imported data with genefilter to k
+      #' elements that exceed A. 
+      ps0 =  meta_filtered_data()
+      if (input$actionb_filter == 0) {
+        # Don't execute filter if filter-button has never been clicked.
+        if (inherits(ps0, "phyloseq")) {
+          return(ps0)
+        } else {
+          return(NULL)
+        }
+      }
+      # Isolate all filter code so that button click is required for update
+      isolate({
+        if (inherits(ps0, "phyloseq")) {
+          if (input$filter_kOverA_sample_threshold > 1) {
+            # kOverA OTU Filtering
+            flist = genefilter::filterfun(
+              genefilter::kOverA(input$filter_kOverA_sample_threshold,
+                                 input$filter_kOverA_count_threshold, na.rm=TRUE)
+            )
+            koatry = try(ps0 <- filter_taxa(ps0, flist, prune=TRUE))
+            if (inherits(koatry, "try-error")) {
+              warning("kOverA parameters resulted in an error, kOverA filtering skipped.")
+            }
+          }
+          return(ps0)
+        } else {
+          return(NULL)
+        }
+      })
+    })
+    
+    output$contents <- renderUI({
+      output_phyloseq_print_html( meta_filtered_data())
+    })
+    
+    output$filtered_contents <- renderUI({
+      output_phyloseq_print_html(filtered_data())
+    })
+    
+    output$sample_variables <- renderText({return(
+      paste0(sample_variables( meta_filtered_data(), errorIfNULL=FALSE), collapse=", ")
+    )})
+    
+    output$rank_names <- renderText({return(
+      paste0(rank_names( meta_filtered_data(), errorIfNULL=FALSE), collapse=", ")
+    )})
+    
+    output$filter_summary_plot <- renderPlot({
+      plib0 = lib_size_hist() + ggtitle("Original Data")
+      potu0 = otu_sum_hist() + ggtitle("Original Data")
+      
+      if (inherits(filtered_data(), "phyloseq")) {
+        potu1 = sums_hist(taxa_sums(filtered_data()), xlab = "Number of Reads (Counts)",
+                          ylab = "Number of OTUs"
+        ) + 
+          ggtitle("Filtered Data")
+        plib1 = sums_hist(sample_sums(filtered_data()), xlab = "Number of Reads (Counts)",
+                          ylab = "Number of Libraries"
+        ) + 
+          ggtitle("Filtered Data")
+      } else {
+        potu1 = plib1 = fail_gen()
+      }
+      gridExtra::grid.arrange(plib0, potu0, plib1, potu1, ncol=2) 
+    })
+    
+    
   })
-  
   
   #---------------------------------------- Alpha Diversity Tab ----------------------------------------# 
   output$rich_uix_color <- renderUI({
