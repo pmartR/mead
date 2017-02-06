@@ -8,7 +8,7 @@ source("https://bioconductor.org/biocLite.R")
 source("./functions/helper_functions.R")
 
 shinyServer(function(input, output) {
-
+  
   #---------- BIOM -------------#
   biom_obj <- reactive({
     if (is.null(input$biom$datapath)) {
@@ -122,8 +122,8 @@ shinyServer(function(input, output) {
   
   #---------------------------------------- Load Data Tab ----------------------------------------#  
   
-
-
+  
+  
   output$library_sizes <- renderPlot({
     if (is.null( full_data())) {
       return(NULL)
@@ -136,25 +136,25 @@ shinyServer(function(input, output) {
   outputOptions(output, "library_sizes", suspendWhenHidden = FALSE)
   
   observeEvent(input$qiime, 
-    output$sample_metadata <- DT::renderDataTable(
-      data.frame(metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
-      options = list(columnDefs = list(list(
-        targets = c(1:(ncol(metadata_obj()) - 1)),
-        render = JS(
-          "function(data, type, row, meta) {",
-          "return type === 'display' && data.length > 10 ?",
-          "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
-          "}")
-      ))), callback = JS('table.page(3).draw(false);'))
+               output$sample_metadata <- DT::renderDataTable(
+                 data.frame(metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
+                 options = list(columnDefs = list(list(
+                   targets = c(1:(ncol(metadata_obj()) - 1)),
+                   render = JS(
+                     "function(data, type, row, meta) {",
+                     "return type === 'display' && data.length > 10 ?",
+                     "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
+                     "}")
+                 ))), callback = JS('table.page(3).draw(false);'))
   )
-
+  
   output$downloadOTUtable <- downloadHandler(
     filename = "OTU_Sample_Table.csv",
     content = function(file) {
       write.csv(otu_table(full_data()), file)
     }
   )
-
+  
   #---- Charts for filtering -------#
   
   observeEvent(metadata_obj(), {
@@ -164,6 +164,7 @@ shinyServer(function(input, output) {
     new_metadata_obj <- reactive({
       return(metadata_obj()[input$selected_indices + 1, ]) # add one because javascript is zero-indexed
     })
+    
     # If the user brushes a chart, input$selected_indices will change
     # If that change is observed, subset new_metadata_obj and 
     # create subsetted charts and table
@@ -185,17 +186,29 @@ shinyServer(function(input, output) {
     outputOptions(output, "library_sizes", suspendWhenHidden = FALSE)
     outputOptions(output, "sample_metadata", suspendWhenHidden = FALSE)
   })
-#------- Reset everything or keep the filtered subset -------#
-  new_metadata_obj <- eventReactive(input$reset_button,{
-      return(metadata_obj())
+  #------- Reset everything or keep the filtered subset -------#
+  observeEvent(input$reset_button,{
+    output$plots <- renderUI({get_plot_output_list(metadata_obj())})
+    output$new_samples <- DT::renderDataTable(
+      data.frame(metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
+      options = list(columnDefs = list(list(
+        targets = c(1:(ncol(metadata_obj()) - 1)),
+        render = JS(
+          "function(data, type, row, meta) {",
+          "return type === 'display' && data.length > 10 ?",
+          "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
+          "}")
+      ))), callback = JS('table.page(3).draw(false);'))
   })
   
   #--------- Merge BIOM and Metadata -----------#
   meta_filtered_data <- reactive({
-    return(merge_phyloseq(biom_obj(), metadata_obj())) ########TODO: this needs to be the subsetted data #########
+    fd <- full_data()
+    md <- new_metadata_obj()
+    return(subset_samples(fd, sample_names(fd) %in% sample_names(md)))
   })
   
-
+  
   
   
   #---------------------------------------- kOverA Filtering Tab ----------------------------------------# 
