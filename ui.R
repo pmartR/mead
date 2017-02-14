@@ -42,8 +42,7 @@ shinyUI(navbarPage(
                             sidebarLayout(
                               sidebarPanel(
                                 uiOutput("plots"),
-                                actionButton("reset_button", label = "Reset Filter", icon = icon("trash")),
-                                actionButton("keep_filter", label = "Keep Filter", icon = icon("trash"))
+                                actionButton("reset_button", label = "Reset Filter", icon = icon("trash"))
                               ),
                               mainPanel(
                                 fluidPage(

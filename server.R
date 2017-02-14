@@ -213,7 +213,7 @@ shinyServer(function(input, output) {
   
   #---------------------------------------- kOverA Filtering Tab ----------------------------------------# 
   kovera_k <- 0
-  observeEvent(input$keep_filter, {
+  observeEvent(meta_filtered_data(), {
     maxSamples = reactive({
       # Create logical indicating the samples to keep, or dummy logical if nonsense input
       if (inherits( meta_filtered_data(), "phyloseq")) {
