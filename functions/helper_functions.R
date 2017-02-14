@@ -1,8 +1,9 @@
 get_plot_output_list <- function(meta_data) {
   # try to coerce columns to Date
-  date_formats <- c("%d/%m/%Y", "%m/%d/%y")
+  date_formats <- c("%d/%m/%Y","%m/%d/%y")
   date_column <- which(sapply(meta_data, function(x) !all(is.na(as.Date(as.character(x),format=date_formats)))))
   if (length(date_column == 1)){
+    #date_obj <- meta_data[,date_column]
     meta_data <- meta_data[,-date_column] 
     # TODO: Render Date as a bar chart
   }
@@ -15,7 +16,7 @@ get_plot_output_list <- function(meta_data) {
   non_unique_columns <- which(unlist(lapply(categorical, function(x) length(unique(x)) != nrow(categorical) & length(unique(x)) != 1)))
   categorical <- categorical[, non_unique_columns]
   input_n_numeric <- ncol(numerical)
-  input_n_categorical <- ncol(categorical)
+  #input_n_categorical <- ncol(categorical)
   # categorical plots 
   # TODO: Create a barchart widget
   #categorical_list <-
