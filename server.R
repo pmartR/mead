@@ -208,7 +208,11 @@ shinyServer(function(input, output) {
   
   #--------- Merge BIOM and Metadata -----------#
   meta_filtered_data <- reactive({
+    if(is.null(input$selected_indices)){
+      return(full_data())
+    }else{
       return(prune_samples(as.character(sample_names(new_metadata_obj())), full_data()))
+    }
   })
   
   #---------------------------------------- kOverA Filtering Tab ----------------------------------------# 
