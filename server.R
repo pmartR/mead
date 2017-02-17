@@ -6,11 +6,15 @@ library(DT)
 theme_set(theme_bw())
 source("https://bioconductor.org/biocLite.R")
 source("./functions/helper_functions.R")
+source("./functions/test_functions.R")
 
 shinyServer(function(input, output) {
   
   #---------- BIOM -------------#
   biom_obj <- reactive({
+    validate(
+      need(input$biom$datapath != "", "Please select a biom file")
+    )
     if (is.null(input$biom$datapath)) {
       return(NULL)
     }else{
@@ -24,6 +28,9 @@ shinyServer(function(input, output) {
   
   #--------- Metadata -----------#
   metadata_obj <- reactive({
+    validate(
+      need(input$qiime$datapath != "", "Please select a QIIME file")
+    )
     if (is.null(input$qiime)) {
       return(NULL)
     }else{
@@ -36,6 +43,10 @@ shinyServer(function(input, output) {
   
   #--------- Merge BIOM and Metadata -----------#
   full_data <- reactive({
+    validate(
+      try(biom_not_matching_metadata(biom_input = sample_names(biom_obj()), metadata_input = sample_names(metadata_obj())))
+    )
+    
     if (any(is.null(c(biom_obj(),metadata_obj())))) {
       return(NULL)
     }else{return(merge_phyloseq(biom_obj(), metadata_obj()))}
@@ -120,9 +131,9 @@ shinyServer(function(input, output) {
     return(returnvars)
   }
   
+
+  
   #---------------------------------------- Load Data Tab ----------------------------------------#  
-  
-  
   
   output$library_sizes <- renderPlot({
     if (is.null( full_data())) {
