@@ -41,12 +41,29 @@ shinyServer(function(input, output) {
     }
   })
   
+  
   #--------- Merge BIOM and Metadata -----------#
   full_data <- reactive({
+    #--------- Warnings and errors -----------#
+    # complete mismatch in biom and QIIME
     validate(
-      try(biom_not_matching_metadata(biom_input = sample_names(biom_obj()), metadata_input = sample_names(metadata_obj())))
+      try(biom_not_matching_metadata(biom_input = sample_names(biom_obj()), metadata_input = sample_names(metadata_obj()))),
+      try(metadata_not_matching_biom(biom_input = sample_names(biom_obj()), metadata_input = sample_names(metadata_obj())))
     )
-    
+    # partial mismatch in biom and QIIME
+    # using shiny notifications
+    metadata_warning <- NULL
+    # observeEvent(input$biom, {
+    #   if (!is.null(metadata_warning))
+    #     return()
+    #   id <<- showNotification("Warning: Samples in biom not in QIIME")
+    # })
+    if (try(metadata_mismatching_biom(biom_input = sample_names(biom_obj()), metadata_input = sample_names(metadata_obj())))) {
+      metadata_warning <<- showNotification("Warning: Samples in QIIME not in biom", duration = NA, type = "error")
+    }
+    if (try(biom_mismatching_metadata(biom_input = sample_names(biom_obj()), metadata_input = sample_names(metadata_obj())))) {
+      metadata_warning <<- showNotification("Warning: Samples in biom not in QIIME", duration = NA, type = "error")
+    }
     if (any(is.null(c(biom_obj(),metadata_obj())))) {
       return(NULL)
     }else{return(merge_phyloseq(biom_obj(), metadata_obj()))}
