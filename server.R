@@ -1,10 +1,10 @@
+library(DT)
 library(shiny)
 library(phyloseq)
 library(ggplot2)
 library(filterWidget)
-library(DT)
 theme_set(theme_bw())
-source("https://bioconductor.org/biocLite.R")
+#source("https://bioconductor.org/biocLite.R")
 source("./functions/helper_functions.R")
 source("./functions/test_functions.R")
 
@@ -41,7 +41,12 @@ shinyServer(function(input, output) {
     }
   })
   
-  
+  # meta_obj <- reactive({
+  #   return(NULL)
+  # })
+  # new_biom_obj <- reactive({
+  #   return(NULL)
+  # })
   #--------- Merge BIOM and Metadata -----------#
   full_data <- reactive({
     #--------- Warnings and errors -----------#
@@ -51,19 +56,21 @@ shinyServer(function(input, output) {
       try(metadata_not_matching_biom(biom_input = sample_names(biom_obj()), metadata_input = sample_names(metadata_obj())))
     )
     # partial mismatch in biom and QIIME
-    # using shiny notifications
     metadata_warning <- NULL
-    # observeEvent(input$biom, {
-    #   if (!is.null(metadata_warning))
-    #     return()
-    #   id <<- showNotification("Warning: Samples in biom not in QIIME")
-    # })
     if (try(metadata_mismatching_biom(biom_input = sample_names(biom_obj()), metadata_input = sample_names(metadata_obj())))) {
-      metadata_warning <<- showNotification("Warning: Samples in QIIME not in biom", duration = NA, type = "error")
+      metadata_warning <<- showNotification("Warning: Samples in QIIME not in biom. Subsetting QIIME", duration = NA, type = "error")
+      meta_obj <<- reactive({
+        prune_samples(as.character(sample_names(biom_obj())), metadata_obj())
+      })
+      return(merge_phyloseq(biom_obj(), meta_obj()))
     }
     if (try(biom_mismatching_metadata(biom_input = sample_names(biom_obj()), metadata_input = sample_names(metadata_obj())))) {
-      metadata_warning <<- showNotification("Warning: Samples in biom not in QIIME", duration = NA, type = "error")
-    }
+      metadata_warning <<- showNotification("Warning: Samples in biom not in QIIME. Subsetting biom", duration = NA, type = "error")
+      new_biom_obj <- reactive({
+        prune_samples(as.character(sample_names(new_biom_obj())), metadata_obj())
+      })
+      return(merge_phyloseq(new_biom_obj(), metadata_obj()))
+      }
     if (any(is.null(c(biom_obj(),metadata_obj())))) {
       return(NULL)
     }else{return(merge_phyloseq(biom_obj(), metadata_obj()))}
@@ -75,6 +82,7 @@ shinyServer(function(input, output) {
       temp <- NULL
     }else{
       dat <-  full_data()
+      # build in a notification to warn when taxa sums == 0
       temp <- prune_taxa(taxa_sums(dat) > 0, dat)
     }
     return(temp)
@@ -163,6 +171,16 @@ shinyServer(function(input, output) {
   })
   outputOptions(output, "library_sizes", suspendWhenHidden = FALSE)
   
+  # metadata_obj <- eventReactive(meta_obj(),{
+  #     return(meta_obj())
+  #   })
+  
+  # observeEvent(new_biom_obj(),{
+  #   biom_obj <- reactive({
+  #     return(new_biom_obj())
+  #   })
+  # })
+    
   observeEvent(input$qiime, 
                output$sample_metadata <- DT::renderDataTable(
                  data.frame(metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
