@@ -34,31 +34,41 @@ HTMLWidgets.widget({
         var g = svg.append("g")
           .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-        var x = d3.scaleLinear()
-          .domain([0, d3.max(arr)])
-          .range([ext[0],ext[1]].map(Math.round));
-
-        var bins = d3.histogram()
-            .domain(x.domain())
+        function onlyUnique(value, index, self) { 
+          return self.indexOf(value) === index;
+        }
+        
+        var unique = arr.filter( onlyUnique ) ;
+        console.log(unique);
+                
+        var x = d3.scaleBand().rangeRound([0, h])
+          .domain(unique);
+          
+      
+        //var y = d3.scaleLinear().rangeRound([h, 0]);
+        
+        var bins = d3.nest().key(function(unique){return unique;}).entries(arr);
             // .thresholds(x.ticks(10))
-            (arr);
 
-        var rotate = d3.max(bins.map(function(d) {
-          return (d.x0.toString()).length;
-        })) > 1;
+        console.log(bins);
+        
+       // var rotate = d3.max(bins.map(function(d) {
+       //   return (d.x0.toString()).length;
+       // })) > 1;
 
         var xaxis = d3.axisBottom(x)
-          .ticks(bins.length);
+          .ticks(bins.values.length);
+          
 
-        var y = d3.scaleOrdinal()
-            .domain([0, d3.max(bins, function(d) { return d.length; })])
+        var y = d3.scaleLinear()
+            .domain([0, d3.max(bins, function(d) { return d.values.length; })])
             .range([h, 0]);
 
         var bar = g.selectAll(".bar")
           .data(bins)
           .enter().append("g")
             .attr("class", "bar")
-            .attr("transform", function(d) { return "translate(" + x(d.x0) + "," + y(d.length) + ")"; });
+            .attr("transform", function(d) { return "translate(" + x(d.x0) + "," + y(d.values.length) + ")"; });
 
         bar.append("rect")
             .attr("x", 1)
@@ -75,15 +85,7 @@ HTMLWidgets.widget({
 
         var bandwidth = bins[0].x1 - bins[0].x0;
 
-        g.append("g")
-            .attr("class", "axis axis--x")
-            .attr("transform", "translate(0," + h + ")")
-            .call(xaxis)
-            .selectAll("text")
-              .attr("y", function(d) { return rotate ? 5 : 10; })
-              .attr("x", function(d) { return rotate ? 9 : 0; })
-              .attr("transform", function(d) { return rotate ? "rotate(45)" : ""; })
-              .style("text-anchor", function(d) { return rotate ? "start" : ""; });
+
 
       var brush = d3.brushX()
           .extent([[0, 0], [w, h]])
