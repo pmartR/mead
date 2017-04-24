@@ -12,9 +12,9 @@ shinyServer(function(input, output) {
   
   #---------- BIOM -------------#
   biom_obj <- reactive({
-    validate(
-      need(input$biom$datapath != "", "Please select a biom file")
-    )
+    # validate(
+    #   need(input$biom$datapath != "", "Please select a biom file")
+    # )
     if (is.null(input$biom$datapath)) {
       return(NULL)
     }else{
@@ -28,9 +28,9 @@ shinyServer(function(input, output) {
   
   #--------- Metadata -----------#
   metadata_obj <- reactive({
-    validate(
-      need(input$qiime$datapath != "", "Please select a QIIME file")
-    )
+    # validate(
+    #   need(input$qiime$datapath != "", "Please select a QIIME file")
+    # )
     if (is.null(input$qiime)) {
       return(NULL)
     }else{
