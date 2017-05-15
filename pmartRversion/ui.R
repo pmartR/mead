@@ -27,6 +27,11 @@ shinyUI(fluidPage(
   h4("Keep samples with specific metadata"),
   uiOutput("plots"),
   br(),
+  fluidRow(
+    actionButton("metadata_reset_button", label = "Reset Meta Filter", icon = icon("trash")),
+    actionButton("metadata_filter_go", label = "Apply Meta Filter", icon = icon("bar-chart"))
+  ),
+  br(),
   h4("Keep samples above a minimum number of reads"),
   fluidRow(
     column(width = 5, h5("Keep samples with at least")),
@@ -34,8 +39,11 @@ shinyUI(fluidPage(
     column(width = 2, h5("reads"))
   ),
   plotOutput("sample_counts_plot"),
+  fluidRow(
+    actionButton("sample_reset_button", label = "Reset Sample Filter", icon = icon("trash")),
+    actionButton("sample_filter_go", label = "Apply Sample Filter", icon = icon("bar-chart"))
+  ),
   hr(),
-  actionButton("reset_button", label = "Reset Filter", icon = icon("trash")),
   h3("OTU Filtering"),
   fluidRow(
     column(width = 3, h5("Keep OTUs with more than"), align = 'center'),
@@ -45,5 +53,10 @@ shinyUI(fluidPage(
     column(width = 2, uiOutput("filter_ui_kOverA_k")),
     column(width = 2, h5("samples"))
   ),
-  plotOutput("read_counts_plot")
+  plotOutput("read_counts_plot"),
+  fluidRow(
+    actionButton("otu_reset_button", label = "Reset OTU Filter", icon = icon("trash")),
+    actionButton("otu_filter_go", label = "Apply OTU Filter", icon = icon("bar-chart"))
+  )
+  
 )) #end page

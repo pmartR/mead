@@ -140,7 +140,7 @@ shinyServer(function(input, output) {
   
   #--------------- k over a  and library read count filtering  ---------#
   kovera_k <- 0
-  observeEvent(filtered_rRna_obj(), {
+  observeEvent(rRNAobj(), {
     maxSamples = reactive({
       # Create logical indicating the samples to keep, or dummy logical if nonsense input
       validate(
@@ -160,30 +160,46 @@ shinyServer(function(input, output) {
   })
   
   #-------------- Library read filtering -----------#
+  sample_filter_obj <- reactive({
+    pmartRseq::sample_based_filter(rRNAobj(), fn = "sum")
+  })
+  output$sample_counts_plot <- renderPlot({
+    validate(
+      need(input$n >= 0, message = "Enter a count minimum >= 0")
+    )
+    plot(sample_filter_obj(), min_num = input$n)
+  })
+  
 
   
-  output$sample_counts_plot <- renderPlot({
-    plot_data <- pmartRseq::count_based_filter(omicsData = filtered_rRna_obj(), fn = "persample")
-    p <- ggplot(plot_data, aes(x = sumSamps))+
-      geom_histogram(color = "black", fill = "black", bins =  nrow(plot_data))+
-      geom_vline(xintercept = as.numeric(input$n), color = "red")+
-      ylab("Samples")+
-      xlab("OTU Reads")+
-      theme_bw()
-    return(p)
-  })
+  # output$sample_counts_plot <- renderPlot({
+  #   plot_data <- pmartRseq::count_based_filter(omicsData = filtered_rRna_obj(), fn = "persample")
+  #   p <- ggplot(plot_data, aes(x = sumSamps))+
+  #     geom_histogram(color = "black", fill = "black", bins =  nrow(plot_data))+
+  #     geom_vline(xintercept = as.numeric(input$n), color = "red")+
+  #     ylab("Samples")+
+  #     xlab("OTU Reads")+
+  #     theme_bw()
+  #   return(p)
+  # })
 
   #-------------- OTU read filtering -----------#  
+  otu_filter_obj <- reactive({
+    pmartRseq::count_based_filter(rRNAobj(), fn = "sum")
+  })
+  
   output$read_counts_plot <- renderPlot({
     validate(
-      need( input$filter_kOverA_count_threshold >= 0, message = "Enter a count minimum greater >= 0")
+      need( input$filter_kOverA_count_threshold >= 0, message = "Enter a count minimum >= 0")
     )
     plot(otu_filter_obj(), min_num = input$filter_kOverA_count_threshold)
   })
   
-  otu_filter_obj <- reactive({
-    pmartRseq::count_based_filter(filtered_rRna_obj(), fn = "sum")
+  filtered_rRna_obj <- eventReactive(input$otu_filter_go, {
+    pmartRseq::applyFilt(otu_filter_obj(), rRNAobj(), min_num = input$filter_kOverA_count_threshold)
   })
+  
+
   
   # output$read_counts_plot <- renderPlot({
   #   plot_data <- pmartRseq::count_based_filter(omicsData = filtered_rRna_obj(), fn = "sum")
