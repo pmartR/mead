@@ -10,6 +10,7 @@ library(DT)
 library(dplyr)
 library(filterWidget)
 library(ggplot2)
+library(pmartRseq)
 source("./functions/helper_functions.R")
 source("./functions/test_functions.R")
 
@@ -116,8 +117,8 @@ shinyServer(function(input, output) {
   #filtered_data_obj <- pmartRseq::as.rRNAdata()
   # end sample metadata filtering
   
-  #--------- Biom Object for filtering -----------#
-  biom_obj <- reactive({
+  #--------- Object for filtering -----------#
+  filtered_rRna_obj <- reactive({
     #------- TODO: need to display an error if the rRNA object isn't created! ---------#
     validate(
       need(!(is.null(rRNAobj()$e_data)), message = "rRNA object fail. Check to make sure file paths are correct")
@@ -125,16 +126,16 @@ shinyServer(function(input, output) {
     if (is.null(input$biom)) {
       return(NULL)
     }else{
-      results <- rRNAobj()$e_data
+      results <- rRNAobj()
       return(results)
     }
   })
   
-  filtered_rRna_obj <- reactive({
-    validate(need(!(is.null(biom_obj())), message = "biom object needed"))
-    return(pmartRseq::as.rRNAdata(e_data = biom_obj(), f_data = metadata_obj(), edata_cname = "OTU", fdata_cname = names(metadata_obj()[1]))) 
-    # If the metadata has been loaded, create the charts
-    })
+  # filtered_rRna_obj <- reactive({
+  #   validate(need(!(is.null(biom_obj())), message = "biom object needed"))
+  #   return(pmartRseq::as.rRNAdata(e_data = biom_obj(), f_data = metadata_obj(), edata_cname = "OTU", fdata_cname = names(metadata_obj()[1]))) 
+  #   # If the metadata has been loaded, create the charts
+  #   })
 
   
   #--------------- k over a  and library read count filtering  ---------#
@@ -159,10 +160,10 @@ shinyServer(function(input, output) {
   })
   
   #-------------- Library read filtering -----------#
+
   
   output$sample_counts_plot <- renderPlot({
     plot_data <- pmartRseq::count_based_filter(omicsData = filtered_rRna_obj(), fn = "persample")
-
     p <- ggplot(plot_data, aes(x = sumSamps))+
       geom_histogram(color = "black", fill = "black", bins =  nrow(plot_data))+
       geom_vline(xintercept = as.numeric(input$n), color = "red")+
@@ -171,24 +172,36 @@ shinyServer(function(input, output) {
       theme_bw()
     return(p)
   })
-  
+
+  #-------------- OTU read filtering -----------#  
   output$read_counts_plot <- renderPlot({
-    plot_data <- pmartRseq::count_based_filter(omicsData = filtered_rRna_obj(), fn = "sum")
-    p <- ggplot(plot_data, aes(x = sumOTUs))+
-      geom_histogram(color = "black", fill = "black")+
-      scale_x_log10()+
-      geom_vline(xintercept = log10(as.numeric(input$filter_kOverA_count_threshold)), color = "red")+
-      ylab("OTUs")+
-      xlab("OTU Reads")+
-      theme_bw()
-    return(p)
-    
-    # Initialize new_metadata_obj object. If no metadata filtering then it's a copy of metadata_obj.
-    # If metadata filtering, will be overwritten with filters 
-    # new_biom_obj <- reactive({
-    #   return(biom_obj()[input$selected_indices + 1, ]) # add one because javascript is zero-indexed
-    # })
+    validate(
+      need( input$filter_kOverA_count_threshold >= 0, message = "Enter a count minimum greater >= 0")
+    )
+    plot(otu_filter_obj(), min_num = input$filter_kOverA_count_threshold)
   })
+  
+  otu_filter_obj <- reactive({
+    pmartRseq::count_based_filter(filtered_rRna_obj(), fn = "sum")
+  })
+  
+  # output$read_counts_plot <- renderPlot({
+  #   plot_data <- pmartRseq::count_based_filter(omicsData = filtered_rRna_obj(), fn = "sum")
+  #   p <- ggplot(plot_data, aes(x = sumOTUs))+
+  #     geom_histogram(color = "black", fill = "black")+
+  #     scale_x_log10()+
+  #     geom_vline(xintercept = log10(as.numeric(input$filter_kOverA_count_threshold)), color = "red")+
+  #     ylab("OTUs")+
+  #     xlab("OTU Reads")+
+  #     theme_bw()
+  #   return(p)
+  #   
+  #   # Initialize new_metadata_obj object. If no metadata filtering then it's a copy of metadata_obj.
+  #   # If metadata filtering, will be overwritten with filters 
+  #   # new_biom_obj <- reactive({
+  #   #   return(biom_obj()[input$selected_indices + 1, ]) # add one because javascript is zero-indexed
+  #   # })
+  # })
   
   #-------- Charts for e_meta filtering -----------#
   #new_biom_obj <- reactive()
