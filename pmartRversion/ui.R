@@ -2,10 +2,11 @@ kovera_k <- 0
 kovera_A <- 0
 source("./functions/helper_functions.R")
 
-shinyUI(fluidPage(
+shinyUI(navbarPage(
   title = (windowTitle = "mead"),
-  titlePanel(div(img(src = "Honey_Jar.png", height = 33, width = 22), "mead")),
+  #titlePanel(div(img(src = "Honey_Jar.png", height = 33, width = 22), "mead")),
   
+  tabPanel("Data and Filtering", 
   fluidRow(
     column(width = 10, offset = 1, 
            tags$hr(),
@@ -58,5 +59,12 @@ shinyUI(fluidPage(
     actionButton("otu_reset_button", label = "Reset OTU Filter", icon = icon("trash")),
     actionButton("otu_filter_go", label = "Apply OTU Filter", icon = icon("bar-chart"))
   )
+  ),
+  tabPanel("Normalization",
+           br()),
+  
+  tabPanel("Community Metrics",
+           plotOutput("plot"),
+           br())
   
 )) #end page

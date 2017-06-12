@@ -31,30 +31,47 @@ shinyServer(function(input, output) {
 
   #--------- somewhere to store the applied filters ---------#
   filters <- reactiveValues(otu = list(), sample = list())
-
+  
+  #--------- kovera observer ---------#
   observeEvent(input$otu_filter_go, {
     filters$otu[[input$otu_filter_go]] <- otu_filter_obj()
-      # isolate(filtered_rRNA_obj <- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
-      #                                             omicsData = rRNAobj(), 
-      #                                             num_samps = input$filter_kOverA_sample_threshold, 
-      #                                             upper_lim = input$filter_kOverA_count_threshold))
-      # print(str(filtered_rRNA_obj))
     })
   
+  #--------- sample observer ---------#
   observeEvent(input$sample_filter_go, {
     filters$sample[[input$sample_filter_go]] <- sample_filter_obj()
-    # isolate(filtered_rRNA_obj <- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
-    #                                             omicsData = rRNAobj(), 
-    #                                             num_samps = input$filter_kOverA_sample_threshold, 
-    #                                             upper_lim = input$filter_kOverA_count_threshold))
-    # print(str(filtered_rRNA_obj))
   })
+  
+  #--------- filter application observer ---------#
+  observe({
+    # no kovera filter yet
+    if (input$otu_filter_go == 0) {
+      filt1 <- rRNAobj()
+    } else{
+      # apply k over a filter
+      isolate({
+        filt1 <- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
+                                      omicsData = rRNAobj(),
+                                      num_samps = input$filter_kOverA_sample_threshold,
+                                      upper_lim = input$filter_kOverA_count_threshold)  
+      })
+    }
     
-   # second_filt <-  pmartRseq::applyFilt(filter_object = filters$sample[[input$sample_filter_go]], omicsData = first_filt, upper_lim = input$n)
-                                       
-  #})
-  
-  
+    # no sample filter yet
+    if (input$sample_filter_go == 0) {
+      filtered_rRNA_obj <- filt1
+      return(filtered_rRNA_obj)
+    }
+    
+    # apply sample filter
+    isolate({
+      filtered_rRNA_obj <- pmartRseq::applyFilt(filter_object = filters$sample[[input$sample_filter_go]],
+                                                omicsData = filt1,
+                                                upper_lim = input$n)
+      return(filtered_rRNA_obj)
+    })
+  })
+
   # filtered_rRNA_obj <- reactive({
   #   if (values$default == 0) {
   #     return(rRNAobj())
@@ -296,7 +313,12 @@ shinyServer(function(input, output) {
   })
   
   otu_filter_obj <- reactive({
-      return(pmartRseq::count_based_filter(rRNAobj(), fn = "ka"))
+    validate(
+      need(length(filtered_rRNA_obj) > 0 , message = "Upload data first")
+    )
+    
+    print(length(filtered_rRNA_obj))
+      return(pmartRseq::count_based_filter(filtered_rRNA_obj, fn = "ka"))
   })
   
   output$read_counts_plot <- renderPlot({
@@ -309,15 +331,34 @@ shinyServer(function(input, output) {
   
   
   #-------------- Library read filtering -----------#
+
   sample_filter_obj <- reactive({
+    if ( input$sample_filter_go == 0) {
       return(pmartRseq::sample_based_filter(omicsData = rRNAobj(), fn = "sum"))
+    }
+    temp <-  pmartRseq::applyFilt(filter_object = filters$sample[[input$sample_filter_go]],
+                                  omicsData = rRNAobj(),
+                                  upper_lim = input$n)
+    return(pmartRseq::sample_based_filter(omicsData = temp, fn = "sum"))
   })
   
   output$sample_counts_plot <- renderPlot({
     validate(
       need(input$n >= 0, message = "Enter a count minimum >= 0")
     )
+
     plot(sample_filter_obj(), min_num = input$n)
+  })
+  
+  ################ Community Metrics Tab #################
+  #----------- alpha diversity example ----------#
+  
+  a_div <- reactive({
+    alphaDiv_calc(rRNAobj())
+  })
+  
+  output$plot <- renderPlot({
+    plot(a_div())
   })
   
 
