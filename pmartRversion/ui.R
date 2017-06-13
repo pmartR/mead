@@ -64,7 +64,7 @@ shinyUI(navbarPage(
            br()),
   
   tabPanel("Community Metrics",
-           plotOutput("plot"),
+           #plotOutput("plot"),
            br())
   
 )) #end page
