@@ -228,23 +228,87 @@ shinyServer(function(input, output) {
   })
   
   ################ Group Designation Tab #################
-  groupDF <- reactive({
-    pmartRseq::group_designation(rRNAobj(), main_effects=input$mainEffects)
+  output$mainEffects <- renderUI({
+    checkboxGroupInput("mainEffects",
+                label = "Grouping Main Effects",
+                choices = as.list(colnames(rRNAobj()$f_data)),
+                selected = "NULL")
   })
   
-  output$group_DF <- renderTable({
-    attr(rRNAobj(), "group_DF")
+  groupDF <- reactive({
+    validate(
+      need(length(input$mainEffects) <= 2, "There can only be a maximum of 2 grouping variables")
+    )
+    
+    validate(
+      need(length(input$mainEffects) > 0, "There needs to be at least one grouping variable")
+    )
+    
+    # if(input$groupDF_reset_button != 0){
+    #   input$groupDF_go = 0
+    #   attr(rRNAobj(), "group_DF") <- NULL
+    # }
+    
+    if(input$groupDF_go == 0){
+      br()
+    }else{
+      return(pmartRseq::group_designation(rRNAobj(), main_effects=input$mainEffects))
+    }
   })
+  
+  # output$group_DF <- renderTable({
+  #   attr(groupDF(), "group_DF")
+  # })
+  
+  observeEvent(input$groupDF_go, 
+               output$group_DF <- DT::renderDataTable(
+                 attr(groupDF(), "group_DF")
+                 ))
   
   ################ Community Metrics Tab #################
   #----------- alpha diversity example ----------#
   
-  a_div <- reactive({
-    pmartRseq::alphaDiv_calc(rRNAobj())
+  output$adiv_index <- renderUI({
+    checkboxGroupInput("adiv_index",
+                       label = "Alpha Diversity Index",
+                       choices = list("Shannon"="shannon","Simpson"="simpson","InverseSimpson"="invsimpson"),
+                       selected = c("shannon","simpson","invsimpson"))
   })
   
-  output$plot <- renderPlot({
-    plot(a_div())
+  output$adiv_xaxis <- renderUI({
+    selectInput("adiv_xaxis",
+                label = "x-axis",
+                choices = c(colnames(attr(groupDF(),"group_DF"))),
+                selected = "Group")
   })
+  
+  output$adiv_color <- renderUI({
+    selectInput("adiv_color",
+                label = "color",
+                choices = c(colnames(attr(groupDF(),"group_DF"))),
+                selected = "Group")
+  })
+  
+  
+  a_div <- reactive({
+    validate(
+      need(length(input$adiv_index) > 0, "There needs to be at least one alpha diversity index")
+    )
+    
+    #if(input$adiv_go == 0){
+    #  br()
+    #}else{
+      return(pmartRseq::alphaDiv_calc(groupDF(), index=input$adiv_index))
+    #}
+  })
+  
+  #observeEvent(input$adiv_go, 
+               output$adiv_plot <- renderPlot({
+                 plot(a_div(), x_axis=input$adiv_xaxis, color=input$adiv_color)
+               })
+               #)
+               
+  #----------- alpha diversity example ----------#
+
   
 }) #end server

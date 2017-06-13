@@ -62,19 +62,32 @@ shinyUI(navbarPage(
   ),
   
   tabPanel("Group Designation",
-           fluidRow(
-             column(10, checkboxGroupInput("mainEffects",
-                                           label=h3("Main Effects for Grouping"),
-                                           choices = as.list(colnames(rRNAobj$f_data)),
-                                           selected = NULL)),
-             tableOutput("group_DF")
-           )),
+           #sidebarLayout(
+             sidebarPanel(
+               h3("Groups"),
+               uiOutput("mainEffects"),
+               fluidRow(
+                 actionButton("groupDF_reset_button", label = "Reset Groupings", icon = icon("trash")),
+                 actionButton("groupDF_go", label = "Apply Groupings", icon = icon("check"))
+               )
+            # )
+
+           ),
+           column(width=8, DT::dataTableOutput("group_DF"))
+  ),
   
-  tabPanel("Normalization",
-           br()),
+  # tabPanel("Normalization",
+  #          br()),
   
   tabPanel("Community Metrics",
-           plotOutput("plot"),
-           br())
+           h3("Alpha Diversity"),
+           uiOutput("adiv_index"),
+           uiOutput("adiv_xaxis"),
+           uiOutput("adiv_color"),
+           #fluidRow(
+            # actionButton("adiv_reset_button", label = "Reset Alpha Diversity Parameters", icon = icon("trash")),
+            # actionButton("adiv_go", label = "Calculate Alpha Diversity", icon = icon("check"))
+           #),
+           plotOutput("adiv_plot"))
   
 )) #end page
