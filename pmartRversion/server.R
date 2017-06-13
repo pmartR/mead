@@ -227,4 +227,24 @@ shinyServer(function(input, output) {
     }
   })
   
+  ################ Group Designation Tab #################
+  groupDF <- reactive({
+    pmartRseq::group_designation(rRNAobj(), main_effects=input$mainEffects)
+  })
+  
+  output$group_DF <- renderTable({
+    attr(rRNAobj(), "group_DF")
+  })
+  
+  ################ Community Metrics Tab #################
+  #----------- alpha diversity example ----------#
+  
+  a_div <- reactive({
+    pmartRseq::alphaDiv_calc(rRNAobj())
+  })
+  
+  output$plot <- renderPlot({
+    plot(a_div())
+  })
+  
 }) #end server

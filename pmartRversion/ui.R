@@ -60,11 +60,21 @@ shinyUI(navbarPage(
     actionButton("otu_filter_go", label = "Apply OTU Filter", icon = icon("bar-chart"))
   )
   ),
+  
+  tabPanel("Group Designation",
+           fluidRow(
+             column(10, checkboxGroupInput("mainEffects",
+                                           label=h3("Main Effects for Grouping"),
+                                           choices = as.list(colnames(rRNAobj$f_data)),
+                                           selected = NULL)),
+             tableOutput("group_DF")
+           )),
+  
   tabPanel("Normalization",
            br()),
   
   tabPanel("Community Metrics",
-           #plotOutput("plot"),
+           plotOutput("plot"),
            br())
   
 )) #end page
