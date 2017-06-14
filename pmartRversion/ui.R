@@ -80,14 +80,15 @@ shinyUI(navbarPage(
   #          br()),
   
   tabPanel("Community Metrics",
+           h3("Plot Parameters"),
+           uiOutput("xaxis"),
+           uiOutput("color"),
            h3("Alpha Diversity"),
            uiOutput("adiv_index"),
-           uiOutput("adiv_xaxis"),
-           uiOutput("adiv_color"),
-           #fluidRow(
-            # actionButton("adiv_reset_button", label = "Reset Alpha Diversity Parameters", icon = icon("trash")),
-            # actionButton("adiv_go", label = "Calculate Alpha Diversity", icon = icon("check"))
-           #),
-           plotOutput("adiv_plot"))
+           plotOutput("adiv_plot"),
+           br(),
+           h3("Richness"),
+           uiOutput("rich_index"),
+           plotOutput("rich_plot"))
   
 )) #end page
