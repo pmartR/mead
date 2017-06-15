@@ -222,16 +222,26 @@ shinyServer(function(input, output) {
     if (input$sample_filter_go == 0 & input$otu_filter_go == 0) {
       plot(sample_filter_obj(), min_num = input$n)
     } else {
+      print(filtered_rRNA_obj)
       sample_filt_obj <- pmartRseq::sample_based_filter(omicsData = filtered_rRNA_obj, fn = "sum")
+      print(sample_filt_obj)
       plot(sample_filt_obj, min_num = input$n)
     }
+  })
+  
+  #------------ reactive filtered data for downstream processing --------------#
+  filtered_data <- reactive({
+    observe({
+      filtered_rRNA_obj
+    })
+    return(isolate(filtered_rRNA_obj))
   })
   
   ################ Group Designation Tab #################
   output$mainEffects <- renderUI({
     checkboxGroupInput("mainEffects",
                 label = "Grouping Main Effects",
-                choices = as.list(colnames(rRNAobj()$f_data)),
+                choices = as.list(colnames(filtered_data()$f_data)),
                 selected = "NULL")
   })
   
@@ -244,15 +254,15 @@ shinyServer(function(input, output) {
       need(length(input$mainEffects) > 0, "There needs to be at least one grouping variable")
     )
     
-    # if(input$groupDF_reset_button != 0){
+    # if (input$groupDF_reset_button != 0) {
     #   input$groupDF_go = 0
     #   attr(rRNAobj(), "group_DF") <- NULL
     # }
     
-    if(input$groupDF_go == 0){
-      br()
+    if (input$groupDF_go == 0) {
+      return()
     }else{
-      return(pmartRseq::group_designation(rRNAobj(), main_effects=input$mainEffects))
+      return(pmartRseq::group_designation(filtered_data(), main_effects=input$mainEffects))
     }
   })
   
@@ -295,7 +305,7 @@ shinyServer(function(input, output) {
       need(length(input$adiv_index) > 0, "There needs to be at least one alpha diversity index")
     )
     
-    #if(input$adiv_go == 0){
+    #if (input$adiv_go == 0) {
     #  br()
     #}else{
       return(pmartRseq::alphaDiv_calc(groupDF(), index=input$adiv_index))
