@@ -4,11 +4,11 @@ source("./functions/helper_functions.R")
 
 shinyUI(navbarPage(
   title = (windowTitle = "mead"),
-  #titlePanel(div(img(src = "Honey_Jar.png", height = 33, width = 22), "mead")),
+ # titlePanel(div(img(src = "Honey_Jar.png", height = 33, width = 22), "mead")),
   
   tabPanel("Data and Filtering", 
   fluidRow(
-    column(width = 10, offset = 1, 
+    column(width = 12, 
            tags$hr(),
            h3("Load Data"),
            fluidRow(
