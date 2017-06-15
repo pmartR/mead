@@ -276,6 +276,21 @@ shinyServer(function(input, output) {
                  ))
   
   ################ Community Metrics Tab #################
+  
+  output$xaxis <- renderUI({
+    selectInput("xaxis",
+                label = "x-axis",
+                choices = c(colnames(attr(groupDF(),"group_DF"))),
+                selected = "Group")
+  })
+  
+  output$color <- renderUI({
+    selectInput("color",
+                label = "color",
+                choices = c(colnames(attr(groupDF(),"group_DF"))),
+                selected = "Group")
+  })
+  
   #----------- alpha diversity example ----------#
   
   output$adiv_index <- renderUI({
@@ -284,20 +299,7 @@ shinyServer(function(input, output) {
                        choices = list("Shannon"="shannon","Simpson"="simpson","InverseSimpson"="invsimpson"),
                        selected = c("shannon","simpson","invsimpson"))
   })
-  
-  output$adiv_xaxis <- renderUI({
-    selectInput("adiv_xaxis",
-                label = "x-axis",
-                choices = c(colnames(attr(groupDF(),"group_DF"))),
-                selected = "Group")
-  })
-  
-  output$adiv_color <- renderUI({
-    selectInput("adiv_color",
-                label = "color",
-                choices = c(colnames(attr(groupDF(),"group_DF"))),
-                selected = "Group")
-  })
+
   
   
   a_div <- reactive({
@@ -305,20 +307,32 @@ shinyServer(function(input, output) {
       need(length(input$adiv_index) > 0, "There needs to be at least one alpha diversity index")
     )
     
-    #if (input$adiv_go == 0) {
-    #  br()
-    #}else{
-      return(pmartRseq::alphaDiv_calc(groupDF(), index=input$adiv_index))
-    #}
+    return(pmartRseq::alphaDiv_calc(groupDF(), index=input$adiv_index))
   })
   
-  #observeEvent(input$adiv_go, 
-               output$adiv_plot <- renderPlot({
-                 plot(a_div(), x_axis=input$adiv_xaxis, color=input$adiv_color)
-               })
-               #)
-               
-  #----------- alpha diversity example ----------#
+  output$adiv_plot <- renderPlot({
+    plot(a_div(), x_axis=input$xaxis, color=input$color)
+  })
 
+               
+  #----------- richness example ----------#
+  output$rich_index <- renderUI({
+    checkboxGroupInput("rich_index",
+                        label = "Richness Index",
+                        choices = list("Observed"="observed","Chao1"="chao1","ACE"="ace","Breakaway"="break"),
+                        selected = c("observed","chao1","ace"))
+   })
+   
+  rich <- reactive({
+    validate(
+      need(length(input$rich_index) > 0, "There needs to be at least one richness index")
+    )
+     
+    return(pmartRseq::richness_calc(groupDF(), index=input$rich_index))
+  })
+   
+  output$rich_plot <- renderPlot({
+    plot(rich(), x_axis=input$xaxis, color=input$color)
+  })
   
 }) #end server
