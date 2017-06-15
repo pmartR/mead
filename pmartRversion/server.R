@@ -222,9 +222,7 @@ shinyServer(function(input, output) {
     if (input$sample_filter_go == 0 & input$otu_filter_go == 0) {
       plot(sample_filter_obj(), min_num = input$n)
     } else {
-      print(filtered_rRNA_obj)
       sample_filt_obj <- pmartRseq::sample_based_filter(omicsData = filtered_rRNA_obj, fn = "sum")
-      print(sample_filt_obj)
       plot(sample_filt_obj, min_num = input$n)
     }
   })
@@ -262,7 +260,7 @@ shinyServer(function(input, output) {
     if (input$groupDF_go == 0) {
       return()
     }else{
-      return(pmartRseq::group_designation(filtered_data(), main_effects=input$mainEffects))
+      return(pmartRseq::group_designation(filtered_data(), main_effects = input$mainEffects))
     }
   })
   
