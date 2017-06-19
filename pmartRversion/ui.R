@@ -36,7 +36,7 @@ shinyUI(navbarPage(
   h4("Keep samples above a minimum number of reads"),
   fluidRow(
     column(width = 5, h5("Keep samples with at least")),
-    column(width = 2, numericInputRow(inputId = "n", label = "", value = 0, min = 0, max = , width = 150)),
+    column(width = 2, numericInput(inputId = "n", label = "", value = 0, min = 0, width = 150)),
     column(width = 2, h5("reads"))
   ),
   plotOutput("sample_counts_plot"),
