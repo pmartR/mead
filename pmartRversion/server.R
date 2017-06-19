@@ -16,7 +16,7 @@ source("./functions/test_functions.R")
 
 filtered_rRNA_obj <- list()
 
-shinyServer(function(input, output) {
+shinyServer(function(input, output, session) {
 
   #---------- rRNA object import -------------#
   rRNAobj <- reactive({
@@ -63,7 +63,7 @@ shinyServer(function(input, output) {
     if (input$sample_filter_go == 0) {
       filtered_rRNA_obj <<- filt1
       return(filtered_rRNA_obj)
-    } else{
+    } else {
       # apply sample filter
       isolate({
         filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$sample[[input$sample_filter_go]],
@@ -77,8 +77,61 @@ shinyServer(function(input, output) {
     
   })
 
-
-
+  #----------------- observe resets ----------#
+  observeEvent(input$otu_reset_button, {
+    kovera_k <- 1
+    maxSamples = reactive({
+      # Create logical indicating the samples to keep, or dummy logical if nonsense input
+      validate(
+        need(!(is.null(metadata_obj())), message = "please import sample metadata")
+      )
+      if (!is.null(metadata_obj())) {
+        return(nrow(metadata_obj()))
+      } else {
+        return(NULL)
+      }
+      
+    })
+    output$filter_ui_kOverA_k <- renderUI({
+      numericInputRow("filter_kOverA_sample_threshold", "",
+                      min = 1, max = maxSamples(), value = kovera_k, step = 1)
+    })
+    filt1 <- rRNAobj()
+    # no sample filter yet
+    if (input$sample_filter_go == 0) {
+      filtered_rRNA_obj <<- filt1
+      return(filtered_rRNA_obj)
+    } else {
+      # apply sample filter
+      isolate({
+        filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$sample[[input$sample_filter_go]],
+                                                   omicsData = filt1,
+                                                   upper_lim = input$n)
+        return(filtered_rRNA_obj)
+      })
+    }
+  })
+  
+  observeEvent(input$sample_reset_button, {
+    updateNumericInput(session, "n",
+                       value = 0)
+    if (input$otu_filter_go == 0) {
+      filt1 <- rRNAobj()
+    } 
+    if (input$otu_filter_go != 0) {
+      # apply k over a filter
+      isolate({
+        filt1 <- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
+                                      omicsData = rRNAobj(),
+                                      num_samps = input$filter_kOverA_sample_threshold,
+                                      upper_lim = input$filter_kOverA_count_threshold)  
+      })
+    }
+    
+    # no sample filter yet
+      filtered_rRNA_obj <<- filt1
+      return(filtered_rRNA_obj)
+  })
   
   #--------- Metadata Object for filtering -----------#
   metadata_obj <- reactive({
