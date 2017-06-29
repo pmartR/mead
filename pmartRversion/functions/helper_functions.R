@@ -1,28 +1,20 @@
 get_plot_output_list <- function(meta_data) {
   # try to coerce columns to Date
   date_formats <- c("%d/%m/%Y","%m/%d/%y")
-  date_column <- which(sapply(meta_data, function(x) !all(is.na(as.Date(as.character(x),format=date_formats)))))
-  if (length(date_column == 1)){
+  date_column <- which(sapply(meta_data, function(x) !all(is.na(as.Date(as.character(x),format = date_formats)))))
+  if (length(date_column == 1)) {
     #date_obj <- meta_data[,date_column]
     meta_data <- meta_data[,-date_column] 
     # TODO: Render Date as a bar chart
   }
   # get the class of each remaining column in the data frame
   column_class <- sapply(meta_data, class)
-  categorical <- meta_data[, which(column_class %in% c("character", "factor", "logical"))]
   numerical <- meta_data[, which(column_class %in% c("numeric", "integer"))]
-
-  # If categorical check for non-uniqueness
-  non_unique_columns <- which(unlist(lapply(categorical, function(x) length(unique(x)) != nrow(categorical) & length(unique(x)) != 1)))
-  categorical <- categorical[, non_unique_columns]
   input_n_numeric <- ncol(numerical)
-  #input_n_categorical <- ncol(categorical)
-  # categorical plots 
-  # TODO: Create a barchart widget
-  #categorical_list <-
+  
   # numerical plots
   numerical_list <- lapply(1:input_n_numeric, function(i) {
-    plotname <- paste("plot", i, sep="")
+    plotname <- paste("plot", i, sep = "")
     plot_output_object <- filterWidget::filterWidgetOutput(plotname, height = 10, width = 20)
     plot_output_object <- renderfilterWidget({
       filterWidget(as.character(names(numerical)[i]), meta_data)
@@ -33,6 +25,23 @@ get_plot_output_list <- function(meta_data) {
   plot_output_list <- numerical_list
   do.call(tagList, plot_output_list) # needed to display properly.
   return(plot_output_list)
+}
+
+get_checkbox_output_list <- function(metadata) {
+  categorical <- meta_data[, which(column_class %in% c("character", "factor", "logical"))]
+  # If categorical check for non-uniqueness
+  non_unique_columns <- which(unlist(lapply(categorical, function(x) length(unique(x)) != nrow(categorical) & length(unique(x)) != 1)))
+  categorical <- categorical[, non_unique_columns]
+  input_n_categorical <- ncol(categorical)
+  # categorical boxes
+  categorical_list <- taglist(
+    lapply(1:input_n_categorical, function(i) {
+    boxname = paste("box", i, sep = "")
+    labelname <- names(categorical)[i]
+    box_output_object <- checkboxGroupInput(inputId = boxname, label = labelname, choices = unique(categorical[,i]), selected = unique(categorical[,i]))
+  })
+  )
+  return(categorical_list)
 }
 
 sums_hist = function(thesums=NULL, xlab="", ylab=""){
