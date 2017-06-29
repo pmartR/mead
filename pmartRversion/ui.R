@@ -28,6 +28,7 @@ shinyUI(navbarPage(
   h4("Keep samples with specific metadata"),
   uiOutput("plots"),
   br(),
+  uiOutput("boxes"),
   fluidRow(
     actionButton("metadata_reset_button", label = "Reset Meta Filter", icon = icon("trash")),
     actionButton("metadata_filter_go", label = "Apply Meta Filter", icon = icon("bar-chart"))
