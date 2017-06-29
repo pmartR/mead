@@ -1,3 +1,4 @@
+require(shiny)
 get_plot_output_list <- function(meta_data) {
   # try to coerce columns to Date
   date_formats <- c("%d/%m/%Y","%m/%d/%y")
@@ -27,20 +28,20 @@ get_plot_output_list <- function(meta_data) {
   return(plot_output_list)
 }
 
-get_checkbox_output_list <- function(metadata) {
+get_checkbox_output_list <- function(meta_data) {
+  column_class <- sapply(meta_data, class)
   categorical <- meta_data[, which(column_class %in% c("character", "factor", "logical"))]
   # If categorical check for non-uniqueness
   non_unique_columns <- which(unlist(lapply(categorical, function(x) length(unique(x)) != nrow(categorical) & length(unique(x)) != 1)))
   categorical <- categorical[, non_unique_columns]
   input_n_categorical <- ncol(categorical)
   # categorical boxes
-  categorical_list <- taglist(
-    lapply(1:input_n_categorical, function(i) {
+  categorical_list <- lapply(1:input_n_categorical, function(i) {
     boxname = paste("box", i, sep = "")
     labelname <- names(categorical)[i]
     box_output_object <- checkboxGroupInput(inputId = boxname, label = labelname, choices = unique(categorical[,i]), selected = unique(categorical[,i]))
   })
-  )
+  do.call(tagList, categorical_list)
   return(categorical_list)
 }
 
