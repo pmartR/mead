@@ -170,6 +170,7 @@ shinyServer(function(input, output, session) {
   observeEvent(metadata_obj(), {
     # If the metadata has been loaded, create the charts
     output$plots <- renderUI({get_plot_output_list(metadata_obj())})
+    #output$boxes <- renderUI({get_checkbox_output_list(metadata_obj())})
     
     # Initialize new_metadata_obj object. If no metadata filtering then it's a copy of metadata_obj.
     # If metadata filtering, will be overwritten with filters 
@@ -281,12 +282,17 @@ shinyServer(function(input, output, session) {
   })
   
   #------------ reactive filtered data for downstream processing --------------#
+
   filtered_data <- reactive({
     observe({
       filtered_rRNA_obj
+      rRNA_filtered <- jsonlite::toJSON(list(filtered_rRNA_obj$e_data, filtered_rRNA_obj$e_meta, filtered_rRNA_obj$f_data))
+      write(rRNA_filtered, file = "rRNA_filtered.json")
     })
     return(isolate(filtered_rRNA_obj))
   })
+  
+
   
   ################ Group Designation Tab #################
   output$mainEffects <- renderUI({
