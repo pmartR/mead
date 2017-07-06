@@ -90,6 +90,8 @@ shinyUI(navbarPage(
            br(),
            h3("Richness"),
            uiOutput("rich_index"),
-           plotOutput("rich_plot"))
+           plotOutput("rich_plot")),
+ tabPanel("Meg's Tab",
+          uiOutput("megs_output"))
   
 )) #end page
