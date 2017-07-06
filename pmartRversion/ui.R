@@ -80,6 +80,7 @@ shinyUI(navbarPage(
   # tabPanel("Normalization",
   #          br()),
   
+ 
   tabPanel("Community Metrics",
            h3("Plot Parameters"),
            uiOutput("xaxis"),
