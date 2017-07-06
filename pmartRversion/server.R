@@ -283,11 +283,13 @@ shinyServer(function(input, output, session) {
   })
   
   #------------ reactive filtered data for downstream processing --------------#
+ 
 
   filtered_data <- reactive({
     # observe({
     #   filtered_rRNA_obj
-    #   #rRNA_filtered <- jsonlite::toJSON(list(filtered_rRNA_obj$e_data, filtered_rRNA_obj$e_meta, filtered_rRNA_obj$f_data))
+    ################# JSON object for Meg #################
+       rRNA_filtered <- jsonlite::toJSON(list(filtered_rRNA_obj$e_data, filtered_rRNA_obj$e_meta, filtered_rRNA_obj$f_data))
     #   #write(rRNA_filtered, file = "rRNA_filtered.json")
     # })
     return(isolate(filtered_rRNA_obj))
