@@ -182,6 +182,7 @@ shinyServer(function(input, output, session) {
     # If that change is observed, subset new_metadata_obj and 
     # create subsetted charts and table
     observeEvent(input$selected_indices, {
+      print(input$box1)
       new_metadata_obj <- reactive({
         return(metadata_obj()[input$selected_indices + 1, ]) # add one because javascript is zero-indexed
       })
