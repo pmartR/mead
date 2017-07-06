@@ -37,24 +37,15 @@ get_checkbox_output_list <- function(meta_data) {
   input_n_categorical <- ncol(categorical)
   # categorical boxes
   categorical_list <- lapply(1:input_n_categorical, function(i) {
-    boxname = paste("box", i, sep = "")
+    #think of a better way to capture the columnname, but for now map it back to raw
+    column_num <- which(names(meta_data) == (names(categorical)[i]))
+    #paste the column num 
+    boxname = paste("box", column_num, sep = "")
     labelname <- names(categorical)[i]
     box_output_object <- checkboxGroupInput(inputId = boxname, label = labelname, choices = unique(categorical[,i]), selected = unique(categorical[,i]))
   })
   do.call(tagList, categorical_list)
   return(categorical_list)
-}
-
-sums_hist = function(thesums=NULL, xlab="", ylab=""){
-  if(is.null(thesums)){
-    p = qplot(0)
-  } else {
-    p = ggplot(data.frame(sums=thesums), aes(x=sums))
-    p = p + geom_histogram()
-    p = p + xlab(xlab) + ylab(ylab) 
-    p = p + scale_x_log10(labels = scales::comma)
-  }
-  return(p)
 }
 
 output_phyloseq_print_html = function(physeq){
