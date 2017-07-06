@@ -28,7 +28,6 @@ shinyUI(navbarPage(
   h4("Keep samples with specific metadata"),
   uiOutput("plots"),
   br(),
-  uiOutput("boxes"),
   fluidRow(
     actionButton("metadata_reset_button", label = "Reset Meta Filter", icon = icon("trash")),
     actionButton("metadata_filter_go", label = "Apply Meta Filter", icon = icon("bar-chart"))
@@ -62,36 +61,42 @@ shinyUI(navbarPage(
   )
   ),
   
-  tabPanel("Group Designation",
-           #sidebarLayout(
-             sidebarPanel(
-               h3("Groups"),
-               uiOutput("mainEffects"),
-               fluidRow(
-                 actionButton("groupDF_reset_button", label = "Reset Groupings", icon = icon("trash")),
-                 actionButton("groupDF_go", label = "Apply Groupings", icon = icon("check"))
-               )
-            # )
-
-           ),
-           column(width=8, DT::dataTableOutput("group_DF"))
-  ),
-  
+  # tabPanel("Group Designation",
+  #          #sidebarLayout(
+  #            sidebarPanel(
+  #              h3("Groups"),
+  #              uiOutput("mainEffects"),
+  #              fluidRow(
+  #                actionButton("groupDF_reset_button", label = "Reset Groupings", icon = icon("trash")),
+  #                actionButton("groupDF_go", label = "Apply Groupings", icon = icon("check"))
+  #              )
+  #           # )
+  # 
+  #          ),
+  #          column(width=8, DT::dataTableOutput("group_DF"))
+  # ),
+  # 
   # tabPanel("Normalization",
   #          br()),
   
-  tabPanel("Community Metrics",
-           h3("Plot Parameters"),
-           uiOutput("xaxis"),
-           uiOutput("color"),
-           h3("Alpha Diversity"),
-           uiOutput("adiv_index"),
-           plotOutput("adiv_plot"),
-           br(),
-           h3("Richness"),
-           uiOutput("rich_index"),
-           plotOutput("rich_plot")),
- tabPanel("Meg's Tab",
-          uiOutput("megs_output"))
+ tabPanel("Community Metrics",
+          h3("Groupings"),
+          uiOutput("group1"),
+          uiOutput("group2"),
+          # fluidRow(
+          #   actionButton("groupDF_reset_button", label = "Reset Groupings", icon = icon("trash")),
+          #   actionButton("groupDF_go", label = "Apply Groupings", icon = icon("check"))
+          # ),
+          DT::dataTableOutput("group_DF"),
+          h3("Plot Parameters"),
+          uiOutput("xaxis"),
+          uiOutput("color"),
+          h3("Alpha Diversity"),
+          uiOutput("adiv_index"),
+          plotOutput("adiv_plot"),
+          br(),
+          h3("Richness"),
+          uiOutput("rich_index"),
+          plotOutput("rich_plot"))
   
 )) #end page
