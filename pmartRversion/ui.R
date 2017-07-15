@@ -62,43 +62,43 @@ shinyUI(navbarPage(
   )
   ),
   
-  # tabPanel("Group Designation",
-  #          #sidebarLayout(
-  #            sidebarPanel(
-  #              h3("Groups"),
-  #              uiOutput("mainEffects"),
-  #              fluidRow(
-  #                actionButton("groupDF_reset_button", label = "Reset Groupings", icon = icon("trash")),
-  #                actionButton("groupDF_go", label = "Apply Groupings", icon = icon("check"))
-  #              )
-  #           # )
-  # 
-  #          ),
-  #          column(width=8, DT::dataTableOutput("group_DF"))
-  # ),
+  tabPanel("Group Designation",
+           h2("Groupings"),
+           h3("Main Effects"),
+           fluidRow(
+              column(width=3, uiOutput("group1")),
+              column(width=3, uiOutput("group2"))
+              ),
+           #actionButton("covs","Add Covariates"),
+           h3("Covariates"),
+           fluidRow(
+             column(width=3, uiOutput("cov1")),
+             column(width=3, uiOutput("cov2"))
+           ),
+           #uiOutput("cov1"),
+           #uiOutput("cov2"),
+           # fluidRow(
+           #   actionButton("groupDF_reset_button", label = "Reset Groupings", icon = icon("trash")),
+           #   actionButton("groupDF_go", label = "Apply Groupings", icon = icon("check"))
+           # ),
+           DT::dataTableOutput("group_DF")
+   ),
   # 
   # tabPanel("Normalization",
   #          br()),
   
- tabPanel("Community Metrics",
-          h3("Groupings"),
-          uiOutput("group1"),
-          uiOutput("group2"),
-          # fluidRow(
-          #   actionButton("groupDF_reset_button", label = "Reset Groupings", icon = icon("trash")),
-          #   actionButton("groupDF_go", label = "Apply Groupings", icon = icon("check"))
-          # ),
-          DT::dataTableOutput("group_DF"),
-          h3("Plot Parameters"),
-          uiOutput("xaxis"),
-          uiOutput("color"),
-          h3("Alpha Diversity"),
-          uiOutput("adiv_index"),
-          plotOutput("adiv_plot"),
-          br(),
-          h3("Richness"),
-          uiOutput("rich_index"),
-          plotOutput("rich_plot")),
+  tabPanel("Community Metrics",
+           h3("Plot Parameters"),
+           uiOutput("xaxis"),
+           uiOutput("color"),
+           h3("Alpha Diversity"),
+           uiOutput("adiv_index"),
+           plotOutput("adiv_plot"),
+           br(),
+           h3("Richness"),
+           uiOutput("rich_index"),
+           plotOutput("rich_plot")),
+  
  tabPanel("Meg's Tab",
           uiOutput("megs_output"))
   

@@ -298,64 +298,46 @@ shinyServer(function(input, output, session) {
 
   
   # ################ Group Designation Tab #################
-  # output$mainEffects <- renderUI({
-  #   checkboxGroupInput("mainEffects",
-  #                      label = "Grouping Main Effects",
-  #                      choices = as.list(colnames(filtered_data()$f_data)),
-  #                      selected = "NULL")
-  # })
 
-      # ################ Group Designation Tab #################
-    # # output$mainEffects <- renderUI({
-    # #   checkboxGroupInput("mainEffects",
-    # #               label = "Grouping Main Effects",
-    # #               choices = as.list(colnames(filtered_data()$f_data)),
-    # #               selected = "NULL")
-    # # })
-    # 
-    # groupDF <- reactive({
-    #   validate(
-    #     need(length(input$mainEffects) <= 2, "There can only be a maximum of 2 grouping variables")
-    #   )
-    #   
-    #   validate(
-    #     need(length(input$mainEffects) > 0, "There needs to be at least one grouping variable")
-    #   )
-    #   
-    #   # if (input$groupDF_reset_button != 0) {
-    #   #   input$groupDF_go = 0
-    #   #   attr(rRNAobj(), "group_DF") <- NULL
-    #   # }
-    #   
-    #   if (input$groupDF_go == 0) {
-    #     return()
-    #   }else{
-    #     return(pmartRseq::group_designation(filtered_data(), main_effects = input$mainEffects))
-    #   }
-    # })
-    # 
-    # # output$group_DF <- renderTable({
-    # #   attr(groupDF(), "group_DF")
-    # # })
-    # 
-    
-    
-    ################ Community Metrics Tab #################
-    
     output$group1 <- renderUI({
       selectInput("group1",
-                  label = "Group 1",
+                  label = "Main Effect 1",
                   choices = colnames(filtered_data()$f_data))
     })
     
     
     output$group2 <- renderUI({
       selectInput("group2",
-                  label = "Group 2",
+                  label = "Main Effect 2",
                   choices = c("NA",colnames(filtered_data()$f_data)),
                   selected = NULL)
       #groupDesignation
     })
+    
+    # output$covs <- renderUI({
+    #   checkboxInput("covs",
+    #                 label = "Any covariates?")
+    # })
+    # input$cov1 <- NA
+    # input$cov2 <- NA
+    #observeEvent(input$covs, {
+      output$cov1 <- renderUI({
+        selectInput("cov1",
+                    label = "Covariate 1",
+                    choices = c("NA",colnames(filtered_data()$f_data)),
+                    selected = NULL)
+      })
+      
+      output$cov2 <- renderUI({
+        selectInput("cov2",
+                    label = "Covariate 2",
+                    choices = c("NA",colnames(filtered_data()$f_data)),
+                    selected = NULL)
+        #groupDesignation
+      })
+    #})
+    
+
     
     groupDF <- reactive({
       if(input$group2 == "NA"){
@@ -363,11 +345,17 @@ shinyServer(function(input, output, session) {
       }else{
         mainEffects <- c(input$group1, input$group2)
       }
+      if(!is.na(input$cov1) | !is.na(input$cov2)){
+        covariates <- c(input$cov1, input$cov2)
+        if(any(is.na(covariates))){
+          covariates <- covariates[!is.na(covariates)]
+        }
+      }
       validate(
         need(length(mainEffects) > 0, "There needs to be at least one grouping variable")
       )
       
-      return(pmartRseq::group_designation(filtered_data(), main_effects = mainEffects))
+      return(pmartRseq::group_designation(filtered_data(), main_effects = mainEffects, covariates = covariates))
       
     })
     
@@ -376,6 +364,8 @@ shinyServer(function(input, output, session) {
     #)
     
     
+    ################ Community Metrics Tab #################
+  
     output$xaxis <- renderUI({
       selectInput("xaxis",
                   label = "x-axis",
