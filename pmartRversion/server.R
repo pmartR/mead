@@ -307,68 +307,98 @@ shinyServer(function(input, output, session) {
   
 
   
-  ################ Group Designation Tab #################
-  output$mainEffects <- renderUI({
-    checkboxGroupInput("mainEffects",
-                label = "Grouping Main Effects",
-                choices = as.list(colnames(filtered_data()$f_data)),
-                selected = "NULL")
-  })
-  
-  groupDF <- reactive({
-    validate(
-      need(length(input$mainEffects) <= 2, "There can only be a maximum of 2 grouping variables")
-    )
+  # ################ Group Designation Tab #################
+
+    output$group1 <- renderUI({
+      selectInput("group1",
+                  label = "Main Effect 1",
+                  choices = colnames(filtered_data()$f_data))
+    })
     
-    validate(
-      need(length(input$mainEffects) > 0, "There needs to be at least one grouping variable")
-    )
     
-    # if (input$groupDF_reset_button != 0) {
-    #   input$groupDF_go = 0
-    #   attr(rRNAobj(), "group_DF") <- NULL
-    # }
+    output$group2 <- renderUI({
+      selectInput("group2",
+                  label = "Main Effect 2",
+                  choices = c("NA",colnames(filtered_data()$f_data)),
+                  selected = NULL)
+      #groupDesignation
+    })
     
-    if (input$groupDF_go == 0) {
-      return()
-    }else{
-      return(pmartRseq::group_designation(filtered_data(), main_effects = input$mainEffects))
-    }
-  })
+    # output$covs <- renderUI({
+    #   checkboxInput("covs",
+    #                 label = "Any covariates?")
+    # })
+    # input$cov1 <- NA
+    # input$cov2 <- NA
+    #observeEvent(input$covs, {
+      output$cov1 <- renderUI({
+        selectInput("cov1",
+                    label = "Covariate 1",
+                    choices = c("NA",colnames(filtered_data()$f_data)),
+                    selected = NULL)
+      })
+      
+      output$cov2 <- renderUI({
+        selectInput("cov2",
+                    label = "Covariate 2",
+                    choices = c("NA",colnames(filtered_data()$f_data)),
+                    selected = NULL)
+        #groupDesignation
+      })
+    #})
+    
+
+    
+    groupDF <- reactive({
+      if(input$group2 == "NA"){
+        mainEffects <- input$group1
+      }else{
+        mainEffects <- c(input$group1, input$group2)
+      }
+      if(!is.na(input$cov1) | !is.na(input$cov2)){
+        covariates <- c(input$cov1, input$cov2)
+        if(any(is.na(covariates))){
+          covariates <- covariates[!is.na(covariates)]
+        }
+      }
+      validate(
+        need(length(mainEffects) > 0, "There needs to be at least one grouping variable")
+      )
+      
+      return(pmartRseq::group_designation(filtered_data(), main_effects = mainEffects, covariates = covariates))
+      
+    })
+    
+    #observeEvent(input$groupDF_go,
+    output$group_DF <- DT::renderDataTable(attr(groupDF(), "group_DF"))
+    #)
+    
+    
+    ################ Community Metrics Tab #################
   
-  # output$group_DF <- renderTable({
-  #   attr(groupDF(), "group_DF")
-  # })
-  
-  observeEvent(input$groupDF_go, 
-               output$group_DF <- DT::renderDataTable(
-                 attr(groupDF(), "group_DF")
-                 ))
-  
-  ################ Community Metrics Tab #################
-  
-  output$xaxis <- renderUI({
-    selectInput("xaxis",
-                label = "x-axis",
-                choices = c(colnames(attr(groupDF(),"group_DF"))),
-                selected = "Group")
-  })
-  
-  output$color <- renderUI({
-    selectInput("color",
-                label = "color",
-                choices = c(colnames(attr(groupDF(),"group_DF"))),
-                selected = "Group")
-  })
-  
-  #----------- alpha diversity example ----------#
-  
-  output$adiv_index <- renderUI({
-    checkboxGroupInput("adiv_index",
-                       label = "Alpha Diversity Index",
-                       choices = list("Shannon"="shannon","Simpson"="simpson","InverseSimpson"="invsimpson"),
-                       selected = c("shannon","simpson","invsimpson"))
-  })
+    output$xaxis <- renderUI({
+      selectInput("xaxis",
+                  label = "x-axis",
+                  choices = c(colnames(attr(groupDF(),"group_DF"))),
+                  selected = "Group")
+    })
+    
+    output$color <- renderUI({
+      selectInput("color",
+                  label = "color",
+                  choices = c(colnames(attr(groupDF(),"group_DF"))),
+                  selected = "Group")
+    })
+    
+    #----------- alpha diversity example ----------#
+    
+    output$adiv_index <- renderUI({
+      checkboxGroupInput("adiv_index",
+                         label = "Alpha Diversity Index",
+                         choices = list("Shannon"="shannon","Simpson"="simpson","InverseSimpson"="invsimpson"),
+                         selected = c("shannon","simpson","invsimpson"))
+    })
+    
 
   
   
