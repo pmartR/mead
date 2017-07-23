@@ -171,18 +171,28 @@ shinyServer(function(input, output, session) {
     # If the metadata has been loaded, create the charts
     output$plots <- renderUI({get_plot_output_list(metadata_obj())})
     output$boxes <- renderUI({get_checkbox_output_list(metadata_obj())})
-    
     # Initialize new_metadata_obj object. If no metadata filtering then it's a copy of metadata_obj.
     # If metadata filtering, will be overwritten with filters 
     new_metadata_obj <- reactive({
-      return(metadata_obj()[input$selected_indices + 1, ]) # add one because javascript is zero-indexed
+      temp <- metadata_obj()[input$selected_indices + 1, ]
+      column_class <- sapply(temp, class)
+      categorical <- temp[, which(column_class %in% c("character", "factor", "logical"))]
+      # If categorical check for non-uniqueness
+      non_unique_columns <- which(unlist(lapply(categorical, function(x) length(unique(x)) != nrow(categorical) & length(unique(x)) != 1)))
+      check_boxes <- names(categorical)[non_unique_columns]
+
+      # return samples in check box subset
+      for (i in 1:length(check_boxes)) {
+        temp <- dplyr::filter_(temp, check_boxes[i] %in% input[[check_boxes[i]]])#find the column name and associated check box
+      }
+      return(temp) # add one because javascript is zero-indexed
     })
     
     # If the user brushes a chart, input$selected_indices will change
     # If that change is observed, subset new_metadata_obj and 
     # create subsetted charts and table
     observeEvent(input$selected_indices, {
-      print(input$box1)
+
       new_metadata_obj <- reactive({
         return(metadata_obj()[input$selected_indices + 1, ]) # add one because javascript is zero-indexed
       })
@@ -204,7 +214,7 @@ shinyServer(function(input, output, session) {
     #outputOptions(output, "sample_metadata", suspendWhenHidden = FALSE)
   })
   #------- Reset everything or keep the filtered subset -------#
-  observeEvent(input$reset_button,{
+  observeEvent(input$metadata_reset_button,{
     output$plots <- renderUI({get_plot_output_list(metadata_obj())})
     output$new_samples <- DT::renderDataTable(
       data.frame(metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
