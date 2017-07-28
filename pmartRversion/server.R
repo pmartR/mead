@@ -30,7 +30,7 @@ shinyServer(function(input, output, session) {
   }) #end rRNAobj
 
   #-------- filter history support -----------#
-  filters <- reactiveValues(otu = list(), sample = list())
+  filters <- reactiveValues(otu = list(), sample = list(), metadata = list())
   
   #--------- kovera observer ---------#
   observeEvent(input$otu_filter_go,{
@@ -40,6 +40,11 @@ shinyServer(function(input, output, session) {
   #--------- sample observer ---------#
   observeEvent(input$sample_filter_go, {
     filters$sample[[input$sample_filter_go]] <- sample_filter_obj()
+  })
+  
+  #--------- metadata observer ---------#
+  observeEvent(input$metadata_filter_go, {
+    filters$metadata[[input$metadata_filter_go]] <- sample_metadata_filter_obj()
   })
   
   #--------- filter application observer ---------#
@@ -73,8 +78,41 @@ shinyServer(function(input, output, session) {
       })
     }
     
- 
-    
+    # no sample metadata filter yet
+    if (input$metadata_filter_go == 0) {
+      filtered_rRNA_obj <<- filt1
+      return(filtered_rRNA_obj)
+    } 
+    if (input$metadata_filter_go > 0) {
+      # apply a metadata filter
+     isolate({
+        # get the intersection of the samples left after checkbox groups are removed
+        temp <- filtered_rRNA_obj$f_data
+        column_class <- sapply(temp, class)
+        categorical <- temp[, which(column_class %in% c("character", "factor", "logical"))]
+        # If categorical check for non-uniqueness
+        non_unique_columns <- which(unlist(lapply(categorical, function(x) length(unique(x)) != nrow(categorical) & length(unique(x)) != 1)))
+        if(length(non_unique_columns > 0)){
+          check_boxes <- names(categorical)[non_unique_columns]
+        } else {
+          check_boxes <- names(categorical)
+        }
+        sample_names <- list()
+        for (i in 1:length(check_boxes)) {
+          print(check_boxes[i])
+          #   temp <- pmartRseq::applyFilt(sample_metadata_filter_obj(), rRNAobj(), samps_to_remove = )
+          sample_names[[i]] <- dplyr::group_by_(temp, check_boxes[i]) %>%
+          dplyr::filter_(check_boxes[i] %in% input[[check_boxes[i]]]) %>%
+          dplyr::select_(attr(filtered_rRNA_obj, "cnames")$fdata_cname)#find the column name and associated check box
+        }
+        sample_names <- Reduce(intersect, sample_names)
+        
+        
+        filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$metadata[[input$metadata_filter_go]],
+                                                   omicsData = filt1,
+                                                   samps_to_remove = sample_names)
+      })
+    }
   })
 
   #----------------- observe resets ----------#
@@ -145,7 +183,7 @@ shinyServer(function(input, output, session) {
     if (is.null(input$qiime)) {
       return(NULL)
     }else{
-      temp <- rRNAobj()$f_data
+      temp <- filtered_rRNA_obj$f_data
       inds <- lapply(temp, function(x) sum(is.na(x)) == length(x) )
       results <- temp[,!(unlist(inds))]
       return(results)
@@ -167,27 +205,17 @@ shinyServer(function(input, output, session) {
   
   #---- Charts for f_meta filtering -------#
   # 
+  sample_metadata_filter_obj <- reactive({
+    return(pmartRseq::sample_based_filter(omicsData = rRNAobj(), fn = "criteria"))
+  })
+  
   observeEvent(metadata_obj(), {
     # If the metadata has been loaded, create the charts
     output$plots <- renderUI({get_plot_output_list(metadata_obj())})
     output$boxes <- renderUI({get_checkbox_output_list(metadata_obj())})
     # Initialize new_metadata_obj object. If no metadata filtering then it's a copy of metadata_obj.
     # If metadata filtering, will be overwritten with filters 
-    new_metadata_obj <- reactive({
-      temp <- metadata_obj()[input$selected_indices + 1, ]
-      column_class <- sapply(temp, class)
-      categorical <- temp[, which(column_class %in% c("character", "factor", "logical"))]
-      # If categorical check for non-uniqueness
-      non_unique_columns <- which(unlist(lapply(categorical, function(x) length(unique(x)) != nrow(categorical) & length(unique(x)) != 1)))
-      check_boxes <- names(categorical)[non_unique_columns]
 
-      # return samples in check box subset
-      for (i in 1:length(check_boxes)) {
-        temp <- dplyr::filter_(temp, check_boxes[i] %in% input[[check_boxes[i]]])#find the column name and associated check box
-      }
-      return(temp) # add one because javascript is zero-indexed
-    })
-    
     # If the user brushes a chart, input$selected_indices will change
     # If that change is observed, subset new_metadata_obj and 
     # create subsetted charts and table
@@ -198,7 +226,7 @@ shinyServer(function(input, output, session) {
       })
       output$plots <- renderUI({get_plot_output_list(new_metadata_obj())})
       output$new_samples <- DT::renderDataTable(
-        data.frame(new_metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
+        data.frame( new_metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
         options = list(columnDefs = list(list(
           targets = c(1:(ncol(metadata_obj()) - 1)),
           render = JS(
