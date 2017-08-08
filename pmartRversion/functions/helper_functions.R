@@ -40,7 +40,7 @@ get_checkbox_output_list <- function(meta_data) {
     #think of a better way to capture the columnname, but for now map it back to raw
     column_num <- which(names(meta_data) == (names(categorical)[i]))
     #paste the column num 
-    boxname = paste("box", column_num, sep = "")
+    boxname = names(categorical)[i]
     labelname <- names(categorical)[i]
     box_output_object <- checkboxGroupInput(inputId = boxname, label = labelname, choices = unique(categorical[,i]), selected = unique(categorical[,i]))
   })
