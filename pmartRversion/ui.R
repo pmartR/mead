@@ -24,6 +24,11 @@ shinyUI(navbarPage(
     tags$head(
       tags$title(h4("Uploaded Metadata View"))
     )),
+  # tags$table(
+  #   DT::dataTableOutput("new_samples"),
+  #   tags$head(
+  #     tags$title(h4("Uploaded Metadata View"))
+  #   )),
   h3("Sample Filtering"),
   h4("Keep samples with specific metadata"),
   uiOutput("plots"),
