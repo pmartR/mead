@@ -17,3 +17,7 @@ dependencies:
   version: 1.8.3
   src: htmlwidgets/lib/underscore
   script: ./underscore-min.js
+- name: Highcharts
+  version: 5.0.11
+  src: htmlwidgets/lib/highcharts
+  script: ./highcharts.min.js
