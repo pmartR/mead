@@ -20,9 +20,13 @@ shinyServer(function(input, output, session) {
 
   #---------- rRNA object import -------------#
   rRNAobj <- reactive({
-  validate(
-    need(input$biom != "", "Please select a biom file")
-  )
+    validate(
+      need(input$biom != "", "Please select a biom file")
+    )
+    validate(
+      need(grepl(".biom", as.character(input$biom$name)), "Biom file must be in .biom format"), errorClass = "red"
+    )
+
     validate(
       need(input$qiime != "", "Please select a qiime file")
     )
