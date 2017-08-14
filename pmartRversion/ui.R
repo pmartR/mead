@@ -83,9 +83,14 @@ shinyUI(navbarPage(
            # ),
            DT::dataTableOutput("group_DF")
    ),
-  # 
-  # tabPanel("Normalization",
-  #          br()),
+   
+  tabPanel("Normalization",
+           h2("Which normalization function to use?"),
+           uiOutput("normFunc"),
+           #actionButton("normGo","Normalize Data"),
+           DT::dataTableOutput("normData")
+           #plotOutput("norm_plot")
+  ),
   
   tabPanel("Community Metrics",
            h3("Plot Parameters"),
@@ -98,6 +103,16 @@ shinyUI(navbarPage(
            h3("Richness"),
            uiOutput("rich_index"),
            plotOutput("rich_plot")),
+ 
+  tabPanel("Ordination",
+           h3("Parameters"),
+           uiOutput("beta_index"),
+           #uiOutput("ord_method"),
+           uiOutput("k"),
+           uiOutput("ord_colors"),
+           #DT::dataTableOutput("beta"),
+           #DT::dataTableOutput("mydist"),
+           plotOutput("ord_plot")),
   
  tabPanel("Meg's Tab",
           uiOutput("megs_output"))

@@ -11,8 +11,15 @@ library(dplyr)
 library(filterWidget)
 library(ggplot2)
 library(pmartRseq)
+#library(phyloseq)
+library(vegan)
 source("./functions/helper_functions.R")
 source("./functions/test_functions.R")
+source("./functions/norm_funcs.R")
+source("./functions/normalize_data.R")
+#source("./functions/mintR_to_phyloseq.R")
+source("./functions/mintR_to_vegan.R")
+source("./functions/mead_NMDS.R")
 
 filtered_rRNA_obj <- list()
 
@@ -295,7 +302,6 @@ shinyServer(function(input, output, session) {
     return(isolate(filtered_rRNA_obj))
   })
   
-
   
   # ################ Group Designation Tab #################
 
@@ -363,6 +369,26 @@ shinyServer(function(input, output, session) {
     output$group_DF <- DT::renderDataTable(attr(groupDF(), "group_DF"))
     #)
     
+    # ################ Normalization Tab #################
+    
+    output$normFunc <- renderUI({
+      selectInput("normFunc",
+                  label = "Normalization Function",
+                  choices = c("percentile","tss","rarefy","poisson","deseq","tmm","css"),
+                  selected = "css")
+    })
+    
+    normalized_data <- reactive({
+      validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
+      validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css"), "Normalization function must be one of the options specified."))
+      return(normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=TRUE))
+    })
+    
+    output$normData <- DT::renderDataTable(normalized_data()$e_data)
+
+    output$norm_plot <- renderPlot({
+      plot(normalized_data(), class="taxonomy2")
+    })
     
     ################ Community Metrics Tab #################
   
@@ -388,8 +414,6 @@ shinyServer(function(input, output, session) {
                          choices = list("Shannon"="shannon","Simpson"="simpson","InverseSimpson"="invsimpson"),
                          selected = c("shannon","simpson","invsimpson"))
     })
-    
-
   
   
   a_div <- reactive({
@@ -423,6 +447,112 @@ shinyServer(function(input, output, session) {
    
   output$rich_plot <- renderPlot({
     plot(rich(), x_axis=input$xaxis, color=input$color)
+  })
+  
+  #----------- phyloseq beta diversity ----------#
+  # output$beta_index <- renderUI({
+  #   selectInput("beta_index",
+  #                      label = "Beta Diversity Index",
+  #                      choices = unname(unlist(phyloseq::distanceMethodList)),
+  #                      selected = "bray")
+  # })
+  # 
+  # output$ord_method <- renderUI({
+  #   selectInput("ord_method",
+  #                 label = "Ordination Method",
+  #                 choices = list("DCA"="DCA","CCA"="CCA","RDA"="RDA","CAP"="CAP","DPCoA"="DPCoA","NMDS"="NMDS","MDS"="MDS","PCoA"="PCoA"),
+  #                 selected = "DCA")
+  # })
+  # 
+  # output$ord_color <- renderUI({
+  #   selectInput("ord_color",
+  #               label = "Color variable for ordination plot",
+  #               choices = c("NA",colnames(attr(groupDF(),"group_DF"))[-c(which(colnames(attr(groupDF(),"group_DF"))=="Group"), which(colnames(attr(groupDF(),"group_DF"))==attr(groupDF(),"cnames")$fdata_cname))]),
+  #               selected = NULL)
+  # })
+  # 
+  # phylo <- reactive({
+  #   return(mintR_to_phyloseq(normalized_data()))
+  # })
+  # 
+  # beta <- reactive({
+  #   validate(
+  #     need(length(input$beta_index) > 0, "There needs to be at least one beta diversity index")
+  #   )
+  #   return(phyloseq::distance(physeq = phylo(), method = input$beta_index))
+  # })
+  # 
+  # #output$beta <- DT::renderDataTable(beta())
+  # 
+  # mydist <- reactive({
+  #   validate(
+  #     need(length(input$beta_index) > 0, "There needs to be at least one beta diversity index")
+  #   )
+  #   validate(
+  #     need(length(input$ord_method) > 0, "There needs to be one ordination method")
+  #   )
+  #   
+  #   return(phyloseq::ordinate(physeq = phylo(), method = input$ord_method, distance = beta()))
+  # })
+  # 
+  # #output$mydist <- DT::renderDataTable(mydist())
+  # 
+  # output$ord_plot <- renderPlot({
+  #   validate(
+  #     need(length(input$ord_color) > 0, "There needs to be one factor to color by in the ordination plot")
+  #   )
+  #   phyloseq::plot_ordination(physeq = phylo(), ordination = mydist(), color = input$ord_color)
+  # })
+  
+  #----------- vegan beta diversity ----------#
+  
+  output$beta_index <- renderUI({
+    selectInput("beta_index",
+                       label = "Beta Diversity Index",
+                       choices = list("manhattan","euclidean","canberra","bray","kulczynski","jaccard","gower","altGower","morisita","horn","mountford","raup","binomial","chao","cao","mahalanobis"),
+                       selected = "bray")
+  })
+  
+  # output$ord_method <- renderUI({
+  #   selectInput("ord_method",
+  #                 label = "Ordination Method",
+  #                 choices = list("NMDS","PCA"),
+  #                 selected = "NMDS")
+  # })
+  
+  output$k <- renderUI({
+    numericInput("k",
+                 label = "Number of dimensions",
+                 value = 4)
+  })
+  
+  output$ord_colors <- renderUI({
+    selectInput("ord_colors",
+                label = "Ordination Group Colors",
+                choices = colnames(attr(normalized_data(),"group_DF")),
+                selected = "Group")
+  })
+  
+  vegdata <- reactive({
+    return(mintR_to_vegan(normalized_data()))
+  })
+  
+  vegmds <- reactive({
+    validate(
+      need(length(input$beta_index) == 1, "There needs to be one beta diversity index.")
+    )
+    
+    return(vegan::metaMDS(vegdata(), distance = input$beta_index, k = input$k, autotransform = FALSE, na.rm = TRUE))
+  })
+  
+  output$ord_plot <- renderPlot({
+    #if(input$ord_method == "NMDS"){
+      mead_NMDS(XX = vegmds(), 
+                ZZ = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]))
+    # }else if(input$ord_method == "PCA"){
+    #   mead_PCA(XX = vegmds(),
+    #            ZZ = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]))
+    # }
   })
   
 }) #end server
