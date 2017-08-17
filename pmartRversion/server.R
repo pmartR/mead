@@ -20,6 +20,10 @@ source("./functions/normalize_data.R")
 #source("./functions/mintR_to_phyloseq.R")
 source("./functions/mintR_to_vegan.R")
 source("./functions/mead_NMDS.R")
+source("./functions/countSTAT.R")
+source("./functions/mint_DESeq2.R")
+source("./functions/mint_edgeR.R")
+source("./functions/plot_all_diffabun.R")
 
 filtered_rRNA_obj <- list()
 
@@ -387,6 +391,7 @@ shinyServer(function(input, output, session) {
     output$normData <- DT::renderDataTable(normalized_data()$e_data)
 
     output$norm_plot <- renderPlot({
+      #browser()
       plot(normalized_data(), class="taxonomy2")
     })
     
@@ -555,4 +560,49 @@ shinyServer(function(input, output, session) {
     # }
   })
   
+  #----------- differential abundance ----------#
+  output$da_index <- renderUI({
+    selectInput("da_index",
+                label = "Differential Abundance Test",
+                choices = list("DESeq2 Wald Test"="dw",
+                               "DESeq2 Likelihood Ratio"="dl",
+                               "EdgeR Likelihood Ratio Test"="el",
+                               "EdgeR with QCML Test"="eq",
+                               "EdgeR with QL F-Test"="ef"),
+                selected = "dw")
+  })
+  
+  output$pval_adjust <- renderUI({
+    selectInput("pval_adjust",
+                label = "P-Value Adjustment Method",
+                choices = p.adjust.methods,
+                selected = "none")
+  })
+  
+  norm_factors <- reactive({
+    validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
+    validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css"), "Normalization function must be one of the options specified."))
+    return(normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=FALSE))
+  })
+  
+  diffabun_res <- reactive({
+    validate(need(length(input$da_index) == 1, "Need to specify a differential abundance test"))
+    validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
+    
+    return(countSTAT(omicsData = groupDF(), norm_factors = norm_factors()$scale_param, comparisons = "all", control = NULL, test = input$da_index, pval_adjust = input$pval_adjust, pval_thresh = 0.05))
+  })
+  
+  output$da_res <- DT::renderDataTable(diffabun_res()$allResults)
+  
+  output$flag_plot <- renderPlot({
+    plot(diffabun_res(), type = "flag")
+  })
+  
+  output$logfc_plot <- renderPlot({
+    plot(diffabun_res(), type = "logfc")
+  })
+  
+  output$plot_all_da <- renderPlot({
+    plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2")
+  })
 }) #end server

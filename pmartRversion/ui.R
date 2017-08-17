@@ -113,6 +113,15 @@ shinyUI(navbarPage(
            #DT::dataTableOutput("beta"),
            #DT::dataTableOutput("mydist"),
            plotOutput("ord_plot")),
+ 
+ tabPanel("Differential Abundance",
+          h3("Parameters"),
+          uiOutput("da_index"),
+          uiOutput("pval_adjust"),
+          DT::dataTableOutput("da_res"),
+          plotOutput("flag_plot"),
+          plotOutput("logfc_plot"),
+          plotOutput("plot_all_da")),
   
  tabPanel("Meg's Tab",
           uiOutput("megs_output"))
