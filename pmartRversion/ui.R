@@ -81,7 +81,12 @@ shinyUI(navbarPage(
            #   actionButton("groupDF_reset_button", label = "Reset Groupings", icon = icon("trash")),
            #   actionButton("groupDF_go", label = "Apply Groupings", icon = icon("check"))
            # ),
-           DT::dataTableOutput("group_DF")
+           p("The following table shows which group each sample belongs to."),
+           DT::dataTableOutput("group_DF"),
+           br(),
+           p("The following table shows the number of samples in each group."),
+           DT::dataTableOutput("group_tab"),
+           br()
    ),
    
   tabPanel("Normalization",
@@ -117,6 +122,7 @@ shinyUI(navbarPage(
   tabPanel("Ordination",
            h3("Parameters"),
            uiOutput("beta_index"),
+           plotOutput("dimcheck"),
            #uiOutput("ord_method"),
            uiOutput("k"),
            uiOutput("ord_colors"),
