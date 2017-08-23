@@ -70,11 +70,11 @@ shinyUI(navbarPage(
               column(width=3, uiOutput("group2"))
               ),
            #actionButton("covs","Add Covariates"),
-           h3("Covariates"),
-           fluidRow(
-             column(width=3, uiOutput("cov1")),
-             column(width=3, uiOutput("cov2"))
-           ),
+           # h3("Covariates"),
+           # fluidRow(
+           #   column(width=3, uiOutput("cov1")),
+           #   column(width=3, uiOutput("cov2"))
+           # ),
            #uiOutput("cov1"),
            #uiOutput("cov2"),
            # fluidRow(
@@ -88,8 +88,18 @@ shinyUI(navbarPage(
            h2("Which normalization function to use?"),
            uiOutput("normFunc"),
            #actionButton("normGo","Normalize Data"),
-           DT::dataTableOutput("normData")
-           #plotOutput("norm_plot")
+           DT::dataTableOutput("normData"),
+           #plotOutput("norm_plot"),
+           br(),
+           h4("Richness vs Abundance"),
+           p("The normalization should reduce the correlation between richness
+             and abundance. If it doesn't appear to, a different normalization
+             function might be preferable."),
+           fluidRow(
+             splitLayout(cellWidths = c("50%","50%"), 
+                         plotOutput("ra_raw"),
+                         plotOutput("ra_norm"))
+           )
   ),
   
   tabPanel("Community Metrics",

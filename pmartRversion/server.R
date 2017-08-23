@@ -322,21 +322,21 @@ shinyServer(function(input, output, session) {
     # input$cov1 <- NA
     # input$cov2 <- NA
     #observeEvent(input$covs, {
-      output$cov1 <- renderUI({
-        selectInput("cov1",
-                    label = "Covariate 1",
-                    choices = c("NA",colnames(filtered_data()$f_data)),
-                    selected = NULL)
-      })
-      
-      output$cov2 <- renderUI({
-        selectInput("cov2",
-                    label = "Covariate 2",
-                    choices = c("NA",colnames(filtered_data()$f_data)),
-                    selected = NULL)
-        #groupDesignation
-      })
-    #})
+    #   output$cov1 <- renderUI({
+    #     selectInput("cov1",
+    #                 label = "Covariate 1",
+    #                 choices = c("NA",colnames(filtered_data()$f_data)),
+    #                 selected = NULL)
+    #   })
+    #   
+    #   output$cov2 <- renderUI({
+    #     selectInput("cov2",
+    #                 label = "Covariate 2",
+    #                 choices = c("NA",colnames(filtered_data()$f_data)),
+    #                 selected = NULL)
+    #     #groupDesignation
+    #   })
+    # #})
     
 
     
@@ -346,17 +346,17 @@ shinyServer(function(input, output, session) {
       }else{
         mainEffects <- c(input$group1, input$group2)
       }
-      if(!is.na(input$cov1) | !is.na(input$cov2)){
-        covariates <- c(input$cov1, input$cov2)
-        if(any(is.na(covariates))){
-          covariates <- covariates[!is.na(covariates)]
-        }
-      }
+      # if(!is.na(input$cov1) | !is.na(input$cov2)){
+      #   covariates <- c(input$cov1, input$cov2)
+      #   if(any(is.na(covariates))){
+      #     covariates <- covariates[!is.na(covariates)]
+      #   }
+      # }
       validate(
         need(length(mainEffects) > 0, "There needs to be at least one grouping variable")
       )
       
-      return(pmartRseq::group_designation(filtered_data(), main_effects = mainEffects, covariates = covariates))
+      return(pmartRseq::group_designation(filtered_data(), main_effects = mainEffects))
       
     })
     
@@ -379,11 +379,35 @@ shinyServer(function(input, output, session) {
       return(pmartRseq::normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=TRUE))
     })
     
-    output$normData <- DT::renderDataTable(normalized_data()$e_data)
+    output$normData <- DT::renderDataTable(normalized_data()$e_data, rownames = FALSE)
 
     output$norm_plot <- renderPlot({
       #browser()
       plot(normalized_data(), class="taxonomy2")
+    })
+    
+    abun_norm <- reactive({
+      return(suppressWarnings(pmartRseq::abundance_calc(normalized_data())))
+    })
+    
+    abun_raw <- reactive({
+      return(suppressWarnings(pmartRseq::abundance_calc(groupDF())))
+    })
+    
+    rich_norm <- reactive({
+      return(suppressWarnings(pmartRseq::richness_calc(normalized_data(), index="observed")))
+    })
+    
+    rich_raw <- reactive({
+      return(suppressWarnings(pmartRseq::richness_calc(groupDF(), index="observed")))
+    })
+    
+    output$ra_raw <- renderPlot({
+      plot(abun_raw(), rich_raw(), plot_title="Raw Data")
+    })
+    
+    output$ra_norm <- renderPlot({
+      plot(abun_norm(), rich_norm(), plot_title="Normalized Data")
     })
     
     ################ Community Metrics Tab #################
