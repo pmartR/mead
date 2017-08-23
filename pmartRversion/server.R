@@ -1,4 +1,4 @@
-
+    
 # This is the server logic for a Shiny web application.
 # You can find out more about building applications with Shiny here:
 #
@@ -15,15 +15,6 @@ library(pmartRseq)
 library(vegan)
 source("./functions/helper_functions.R")
 source("./functions/test_functions.R")
-source("./functions/norm_funcs.R")
-source("./functions/normalize_data.R")
-#source("./functions/mintR_to_phyloseq.R")
-source("./functions/mintR_to_vegan.R")
-source("./functions/mead_NMDS.R")
-source("./functions/countSTAT.R")
-source("./functions/mint_DESeq2.R")
-source("./functions/mint_edgeR.R")
-source("./functions/plot_all_diffabun.R")
 
 filtered_rRNA_obj <- list()
 
@@ -37,7 +28,7 @@ shinyServer(function(input, output, session) {
     validate(
       need(input$qiime != "", "Please select a qiime file")
     )
-    return(pmartRseq::as.rRNAdata(e_data = as.character(input$biom$datapath), f_data = as.character(input$qiime$datapath), edata_cname = "OTU"))
+    return(pmartRseq::as.seqData(e_data = as.character(input$biom$datapath), f_data = as.character(input$qiime$datapath), edata_cname = "OTU", data_type = "rRNA"))
   }) #end rRNAobj
 
   #-------- filter history support -----------#
@@ -385,7 +376,7 @@ shinyServer(function(input, output, session) {
     normalized_data <- reactive({
       validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
       validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css"), "Normalization function must be one of the options specified."))
-      return(normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=TRUE))
+      return(pmartRseq::normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=TRUE))
     })
     
     output$normData <- DT::renderDataTable(normalized_data()$e_data)
@@ -539,7 +530,7 @@ shinyServer(function(input, output, session) {
   })
   
   vegdata <- reactive({
-    return(mintR_to_vegan(normalized_data()))
+    return(pmartRseq::pmartRseq_to_vegan(normalized_data()))
   })
   
   vegmds <- reactive({
@@ -552,8 +543,8 @@ shinyServer(function(input, output, session) {
   
   output$ord_plot <- renderPlot({
     #if(input$ord_method == "NMDS"){
-      mead_NMDS(XX = vegmds(), 
-                ZZ = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]))
+      pmartRseq::pmartRseq_NMDS(res = vegmds(), 
+                grp = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]))
     # }else if(input$ord_method == "PCA"){
     #   mead_PCA(XX = vegmds(),
     #            ZZ = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]))
@@ -582,14 +573,14 @@ shinyServer(function(input, output, session) {
   norm_factors <- reactive({
     validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
     validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css"), "Normalization function must be one of the options specified."))
-    return(normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=FALSE))
+    return(pmartRseq::normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=FALSE))
   })
   
   diffabun_res <- reactive({
     validate(need(length(input$da_index) == 1, "Need to specify a differential abundance test"))
     validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
     
-    return(countSTAT(omicsData = groupDF(), norm_factors = norm_factors()$scale_param, comparisons = "all", control = NULL, test = input$da_index, pval_adjust = input$pval_adjust, pval_thresh = 0.05))
+    return(pmartRseq::countSTAT(omicsData = groupDF(), norm_factors = norm_factors()$scale_param, comparisons = "all", control = NULL, test = input$da_index, pval_adjust = input$pval_adjust, pval_thresh = 0.05))
   })
   
   output$da_res <- DT::renderDataTable(diffabun_res()$allResults)
@@ -603,6 +594,6 @@ shinyServer(function(input, output, session) {
   })
   
   output$plot_all_da <- renderPlot({
-    plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2")
+    pmartRseq::plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2")
   })
 }) #end server
