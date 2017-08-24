@@ -376,15 +376,19 @@ shinyServer(function(input, output, session) {
     output$normFunc <- renderUI({
       selectInput("normFunc",
                   label = "Normalization Function",
-                  choices = c("percentile","tss","rarefy","poisson","deseq","tmm","css"),
+                  choices = c("percentile","tss","rarefy","poisson","deseq","tmm","css","none"),
                   selected = "css")
     })
     
   # Create normalized data
     normalized_data <- reactive({
       validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
-      validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css"), "Normalization function must be one of the options specified."))
-      return(pmartRseq::normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=TRUE))
+      validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css","none"), "Normalization function must be one of the options specified."))
+      if(input$normFunc == "none"){
+        return(groupDF())
+      }else{
+        return(pmartRseq::normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=TRUE))
+      }
     })
     
   # Look at normalized results
@@ -566,7 +570,7 @@ shinyServer(function(input, output, session) {
     })
     
     output$dimcheck <- renderPlot({
-      goeveg::dimcheckMDS(vegdata(), distance = input$beta_index)
+      goeveg::dimcheckMDS(vegdata(), distance = input$beta_index, autotransform = FALSE)
     })
     
     # output$ord_method <- renderUI({
@@ -580,7 +584,7 @@ shinyServer(function(input, output, session) {
     output$k <- renderUI({
       numericInput("k",
                    label = "Number of dimensions",
-                   value = 4)
+                   value = NULL)
     })
     
   # Select what variable to color by
@@ -591,21 +595,30 @@ shinyServer(function(input, output, session) {
                   selected = "Group")
     })
     
+    output$ellipses <- renderUI({
+      checkboxInput("ellipses",
+                    label = "NMDS Ellipses",
+                    value = TRUE)
+    })
+    
     
   # Use vegan to calculate scores for beta diversity index
     vegmds <- reactive({
       validate(
         need(length(input$beta_index) == 1, "There needs to be one beta diversity index.")
       )
+      validate(
+        need(input$k >= 1, "The dimension values needs to be greater than 0.")
+      )
       
-      return(vegan::metaMDS(vegdata(), distance = input$beta_index, k = input$k, autotransform = FALSE, na.rm = TRUE))
+      return(vegan::metaMDS(vegdata(), distance = input$beta_index, k = input$k, autotransform = FALSE))
     })
     
   # Plot showing beta diversity
     output$ord_plot <- renderPlot({
       #if(input$ord_method == "NMDS"){
         pmartRseq::pmartRseq_NMDS(res = vegmds(), 
-                  grp = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]))
+                  grp = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]),ellipses=input$ellipses)
       # }else if(input$ord_method == "PCA"){
       #   mead_PCA(XX = vegmds(),
       #            ZZ = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]))
@@ -639,8 +652,12 @@ shinyServer(function(input, output, session) {
   # Calculate normalization factors to use in differential abundance test - will use the same that was used on normalization tab
     norm_factors <- reactive({
       validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
-      validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css"), "Normalization function must be one of the options specified."))
-      return(pmartRseq::normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=FALSE))
+      validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css","none"), "Normalization function must be one of the options specified."))
+      if(input$normFunc == "none"){
+        return(rep(1,nrow(attr(groupDF(),"group_DF"))))
+      }else{
+        return(pmartRseq::normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=FALSE))
+      }
     })
     
   # Perform differential abundance analysis

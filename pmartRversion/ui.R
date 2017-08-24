@@ -126,6 +126,7 @@ shinyUI(navbarPage(
            #uiOutput("ord_method"),
            uiOutput("k"),
            uiOutput("ord_colors"),
+           uiOutput("ellipses"),
            #DT::dataTableOutput("beta"),
            #DT::dataTableOutput("mydist"),
            plotOutput("ord_plot")),
