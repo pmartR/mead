@@ -584,7 +584,7 @@ shinyServer(function(input, output, session) {
     output$k <- renderUI({
       numericInput("k",
                    label = "Number of dimensions",
-                   value = NULL)
+                   value = 4)
     })
     
   # Select what variable to color by
@@ -599,6 +599,20 @@ shinyServer(function(input, output, session) {
       checkboxInput("ellipses",
                     label = "NMDS Ellipses",
                     value = TRUE)
+    })
+    
+    output$ord_x <- renderUI({
+      selectInput("ord_x",
+                  label = "NMDS x-axis",
+                  choices = paste("NMDS",seq(1,input$k,1),sep=""),
+                  selected = "NMDS1")
+    })
+    
+    output$ord_y <- renderUI({
+      selectInput("ord_y",
+                  label = "NMDS y-axis",
+                  choices = paste("NMDS",seq(1,input$k,1),sep=""),
+                  selected = "NMDS2")
     })
     
     
@@ -617,8 +631,10 @@ shinyServer(function(input, output, session) {
   # Plot showing beta diversity
     output$ord_plot <- renderPlot({
       #if(input$ord_method == "NMDS"){
-        pmartRseq::pmartRseq_NMDS(res = vegmds(), 
-                  grp = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]),ellipses=input$ellipses)
+        # pmartRseq::pmartRseq_NMDS(res = vegmds(), 
+        #           grp = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]),ellipses=input$ellipses)
+      pmartRseq::pmartRseq_NMDS(res = vegmds(), omicsData = normalized_data(), grp = input$ord_colors, k = input$k, 
+                                x_axis = input$ord_x, y_axis = input$ord_y, ellipses=input$ellipses)
       # }else if(input$ord_method == "PCA"){
       #   mead_PCA(XX = vegmds(),
       #            ZZ = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]))

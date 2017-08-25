@@ -124,8 +124,14 @@ shinyUI(navbarPage(
            uiOutput("beta_index"),
            plotOutput("dimcheck"),
            #uiOutput("ord_method"),
-           uiOutput("k"),
-           uiOutput("ord_colors"),
+           fluidRow(
+             column(width=3, uiOutput("k")),
+             column(width=3, uiOutput("ord_x"))
+           ),
+           fluidRow(
+             column(width=3, uiOutput("ord_colors")),
+             column(width=3, uiOutput("ord_y"))
+           ),
            uiOutput("ellipses"),
            #DT::dataTableOutput("beta"),
            #DT::dataTableOutput("mydist"),
