@@ -665,6 +665,15 @@ shinyServer(function(input, output, session) {
                   selected = "none")
     })
     
+    output$pval_thresh <- renderUI({
+      sliderInput("pval_thresh",
+                  label = "P-value significance threshold",
+                  min = 0,
+                  max = 1,
+                  step = 0.01,
+                  value = 0.05)
+    })
+    
   # Calculate normalization factors to use in differential abundance test - will use the same that was used on normalization tab
     norm_factors <- reactive({
       validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
@@ -701,4 +710,48 @@ shinyServer(function(input, output, session) {
     output$plot_all_da <- renderPlot({
       pmartRseq::plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2", x_lab = "Phylum")
     })
+    
+    ################ Indicator Species Tab #################
+    #----------- indicator species ----------#
+    output$within <- renderUI({
+      selectInput("within",
+                  label = "Perform indicator species analysis between groups within a variable",
+                  choices = c(NULL,colnames(attr(normalized_data(),"group_DF"))[-which(colnames(attr(normalized_data(),"group_DF")) %in% c("Group",attr(normalized_data(),"cnames")$fdata_cname))]),
+                  selected = NULL)
+    })
+
+    output$is_pval_thresh <- renderUI({
+      sliderInput("is_pval_thresh",
+                  label = "P-value significance threshold",
+                  min = 0,
+                  max = 1,
+                  step = 0.01,
+                  value = 0.05)
+    })
+
+    indsp_res <- reactive({
+      return(pmartRseq::indsp_calc(omicsData = normalized_data(), within = input$within, pval_thresh = input$is_pval_thresh))
+    })
+
+    output$indsp_res <- DT::renderDataTable(indsp_res())
+
+
+    output$indsp_xaxis <- renderUI({
+      selectInput("indsp_xaxis",
+                  label = "X-Axis for Indicator Species Plot",
+                  choices = colnames(attr(normalized_data(),"group_DF"))[-which(colnames(attr(normalized_data(),"group_DF"))==attr(normalized_data(),"cnames")$fdata_cname)],
+                  selected = "Group")
+    })
+
+    output$indsp_group <- renderUI({
+      selectInput("indsp_group",
+                  label = "Fill Variable for Indicator Species Plot",
+                  choices = colnames(normalized_data()$e_meta),
+                  selected = colnames(normalized_data()$e_meta)[3])
+    })
+
+    output$indsp_plot <- renderPlot({
+      pmartRseq::plot_indsp(indsp = indsp_res(), omicsData = normalized_data(), x_axis = input$indsp_xaxis, group = input$indsp_group)
+    })
+    
 }) #end server

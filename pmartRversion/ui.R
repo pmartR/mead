@@ -141,10 +141,20 @@ shinyUI(navbarPage(
           h3("Parameters"),
           uiOutput("da_index"),
           uiOutput("pval_adjust"),
+          uiOutput("pval_thresh"),
           DT::dataTableOutput("da_res"),
           plotOutput("flag_plot"),
           plotOutput("logfc_plot"),
           plotOutput("plot_all_da")),
+ 
+ tabPanel("Indicator Species",
+          h3("Parameters"),
+          uiOutput("within"),
+          uiOutput("is_pval_thresh"),
+          DT::dataTableOutput("indsp_res"),
+          uiOutput("indsp_xaxis"),
+          uiOutput("indsp_group"),
+          plotOutput("indsp_plot")),
   
  tabPanel("Meg's Tab",
           uiOutput("megs_output"))
