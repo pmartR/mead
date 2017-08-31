@@ -6,8 +6,8 @@
 #
 
 library(shiny)
-library(DT)
 library(dplyr)
+library(DT)
 library(filterWidget)
 library(ggplot2)
 library(pmartRseq)

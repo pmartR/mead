@@ -94,7 +94,6 @@ shinyUI(navbarPage(
            uiOutput("normFunc"),
            #actionButton("normGo","Normalize Data"),
            DT::dataTableOutput("normData"),
-           #plotOutput("norm_plot"),
            br(),
            h4("Richness vs Abundance"),
            p("The normalization should reduce the correlation between richness
@@ -104,7 +103,8 @@ shinyUI(navbarPage(
              splitLayout(cellWidths = c("50%","50%"), 
                          plotOutput("ra_raw"),
                          plotOutput("ra_norm"))
-           )
+           ),
+           plotOutput("norm_plot")
   ),
   
   tabPanel("Community Metrics",
