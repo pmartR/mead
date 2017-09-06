@@ -370,6 +370,18 @@ shinyServer(function(input, output, session) {
   # Also output a table showing the number of reps in each group
     output$group_tab <- DT::renderDataTable(as.data.frame(table(attr(groupDF(), "group_DF")$Group)))
     
+    
+    # ################ Outliers Tab #################
+
+    outlier_jaccard <- reactive({
+      pmartRseq::jaccard_calc(omicsData = groupDF())
+    })
+    
+    output$jac_plot <- renderPlot({
+      plot(outlier_jaccard())
+    })
+    
+    
     # ################ Normalization Tab #################
     
   # Select which normalization function to use
@@ -387,17 +399,21 @@ shinyServer(function(input, output, session) {
       if(input$normFunc == "none"){
         return(groupDF())
       }else{
-        return(pmartRseq::normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=TRUE))
+        return(pmartRseq::split_emeta(pmartRseq::normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=TRUE), cname="OTU", split1=NULL, numcol=7, split2="__", num=2, newnames=NULL))
       }
     })
     
   # Look at normalized results
     output$normData <- DT::renderDataTable(normalized_data()$e_data, rownames = FALSE)
+    
+    # normalized_data <- reactive({
+    #   return(pmartRseq::split_emeta(omicsData=normalized_data(), cname="OTU", split1=NULL, numcol=7, split2="__", num=2, newnames=NULL))
+    # })
 
   # Try to make a stacked bar plot - not working right now
     output$norm_plot <- renderPlot({
       #browser()
-      plot(normalized_data(), class="taxonomy2")
+      plot(normalized_data(), class="Phylum")
     })
     
   # Calculate abundance on normalized data
@@ -569,8 +585,10 @@ shinyServer(function(input, output, session) {
       return(pmartRseq::pmartRseq_to_vegan(normalized_data()))
     })
     
-    output$dimcheck <- renderPlot({
-      goeveg::dimcheckMDS(vegdata(), distance = input$beta_index, autotransform = FALSE)
+    observeEvent(input$submit_goe, {
+      output$dimcheck <- renderPlot({
+        goeveg::dimcheckMDS(vegdata(), distance = input$beta_index, autotransform = FALSE)
+      })
     })
     
     # output$ord_method <- renderUI({
@@ -595,50 +613,53 @@ shinyServer(function(input, output, session) {
                   selected = "Group")
     })
     
-    output$ellipses <- renderUI({
-      checkboxInput("ellipses",
-                    label = "NMDS Ellipses",
-                    value = TRUE)
-    })
+    observeEvent(input$submit_ord, {
     
-    output$ord_x <- renderUI({
-      selectInput("ord_x",
-                  label = "NMDS x-axis",
-                  choices = paste("NMDS",seq(1,input$k,1),sep=""),
-                  selected = "NMDS1")
-    })
-    
-    output$ord_y <- renderUI({
-      selectInput("ord_y",
-                  label = "NMDS y-axis",
-                  choices = paste("NMDS",seq(1,input$k,1),sep=""),
-                  selected = "NMDS2")
-    })
-    
-    
-  # Use vegan to calculate scores for beta diversity index
-    vegmds <- reactive({
-      validate(
-        need(length(input$beta_index) == 1, "There needs to be one beta diversity index.")
-      )
-      validate(
-        need(input$k >= 1, "The dimension values needs to be greater than 0.")
-      )
+      output$ellipses <- renderUI({
+        checkboxInput("ellipses",
+                      label = "NMDS Ellipses",
+                      value = TRUE)
+      })
       
-      return(vegan::metaMDS(vegdata(), distance = input$beta_index, k = input$k, autotransform = FALSE))
-    })
+      output$ord_x <- renderUI({
+        selectInput("ord_x",
+                    label = "NMDS x-axis",
+                    choices = paste("NMDS",seq(1,input$k,1),sep=""),
+                    selected = "NMDS1")
+      })
+      
+      output$ord_y <- renderUI({
+        selectInput("ord_y",
+                    label = "NMDS y-axis",
+                    choices = paste("NMDS",seq(1,input$k,1),sep=""),
+                    selected = "NMDS2")
+      })
+      
+      
+    # Use vegan to calculate scores for beta diversity index
+      vegmds <- reactive({
+        validate(
+          need(length(input$beta_index) == 1, "There needs to be one beta diversity index.")
+        )
+        validate(
+          need(input$k >= 1, "The dimension values needs to be greater than 0.")
+        )
+        
+        return(vegan::metaMDS(vegdata(), distance = input$beta_index, k = input$k, autotransform = FALSE))
+      })
     
-  # Plot showing beta diversity
-    output$ord_plot <- renderPlot({
-      #if(input$ord_method == "NMDS"){
-        # pmartRseq::pmartRseq_NMDS(res = vegmds(), 
-        #           grp = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]),ellipses=input$ellipses)
-      pmartRseq::pmartRseq_NMDS(res = vegmds(), omicsData = normalized_data(), grp = input$ord_colors, k = input$k, 
-                                x_axis = input$ord_x, y_axis = input$ord_y, ellipses=input$ellipses)
-      # }else if(input$ord_method == "PCA"){
-      #   mead_PCA(XX = vegmds(),
-      #            ZZ = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]))
-      # }
+    # Plot showing beta diversity
+      output$ord_plot <- renderPlot({
+        #if(input$ord_method == "NMDS"){
+          # pmartRseq::pmartRseq_NMDS(res = vegmds(), 
+          #           grp = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]),ellipses=input$ellipses)
+        pmartRseq::pmartRseq_NMDS(res = vegmds(), omicsData = normalized_data(), grp = input$ord_colors, k = input$k, 
+                                  x_axis = input$ord_x, y_axis = input$ord_y, ellipses=input$ellipses)
+        # }else if(input$ord_method == "PCA"){
+        #   mead_PCA(XX = vegmds(),
+        #            ZZ = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]))
+        # }
+      })
     })
   
     
@@ -674,41 +695,59 @@ shinyServer(function(input, output, session) {
                   value = 0.05)
     })
     
-  # Calculate normalization factors to use in differential abundance test - will use the same that was used on normalization tab
-    norm_factors <- reactive({
-      validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
-      validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css","none"), "Normalization function must be one of the options specified."))
-      if(input$normFunc == "none"){
-        return(rep(1,nrow(attr(groupDF(),"group_DF"))))
-      }else{
-        return(pmartRseq::normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=FALSE))
-      }
+    output$comparisons <- renderUI({
+      checkboxGroupInput("comparisons",
+                         label = "Differential abundance pairwise comparisons",
+                         choices = lapply(c(1:(factorial(length(unique(attr(groupDF(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(groupDF(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(groupDF(),"group_DF")$Group),2)[,x], collapse="  VS  ")),
+                         selected = sapply(c(1:(factorial(length(unique(attr(groupDF(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(groupDF(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(groupDF(),"group_DF")$Group),2)[,x], collapse="  VS  ")))
     })
     
-  # Perform differential abundance analysis
-    diffabun_res <- reactive({
-      validate(need(length(input$da_index) == 1, "Need to specify a differential abundance test"))
-      validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
+    observeEvent(input$submit_da, {
+    # Calculate normalization factors to use in differential abundance test - will use the same that was used on normalization tab
+      norm_factors <- reactive({
+        validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
+        validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css","none"), "Normalization function must be one of the options specified."))
+        if(input$normFunc == "none"){
+          return(rep(1,nrow(attr(groupDF(),"group_DF"))))
+        }else{
+          return(pmartRseq::normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=FALSE))
+        }
+      })
       
-      return(pmartRseq::countSTAT(omicsData = groupDF(), norm_factors = norm_factors()$scale_param, comparisons = "all", control = NULL, test = input$da_index, pval_adjust = input$pval_adjust, pval_thresh = 0.05))
-    })
-    
-  # Look at the results - this is hard to look at, maybe remove?
-    output$da_res <- DT::renderDataTable(diffabun_res()$allResults)
-    
-  # Plot showing number differentially abundant in each comparison and direction of change
-    output$flag_plot <- renderPlot({
-      plot(diffabun_res(), type = "flag")
-    })
-    
-  # Heatmap showing the log2foldchanges of differentially abundant features
-    output$logfc_plot <- renderPlot({
-      plot(diffabun_res(), type = "logfc")
-    })
-    
-  # Plot showing log fold changes and p-values of all features, grouped by taxonomy
-    output$plot_all_da <- renderPlot({
-      pmartRseq::plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2", x_lab = "Phylum")
+      comps <- reactive({
+        tmp1 <- lapply(input$comparisons, function(x) strsplit(x, "  VS  ")[[1]][1])
+        tmp1 <- do.call(cbind, tmp1)
+        tmp2 <- lapply(input$comparisons, function(x) strsplit(x, "  VS  ")[[1]][2])
+        tmp2 <- do.call(cbind, tmp2)
+        tmp <- lapply(c(1:length(tmp1)), function(x) c(tmp1[x],tmp2[x]))
+        return(tmp)
+      })
+      
+    # Perform differential abundance analysis
+      diffabun_res <- reactive({
+        validate(need(length(input$da_index) == 1, "Need to specify a differential abundance test"))
+        validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
+        
+        return(pmartRseq::countSTAT(omicsData = groupDF(), norm_factors = norm_factors()$scale_param, comparisons = comps(), control = NULL, test = input$da_index, pval_adjust = input$pval_adjust, pval_thresh = 0.05))
+      })
+      
+    # Look at the results - this is hard to look at, maybe remove?
+      output$da_res <- DT::renderDataTable(diffabun_res()$allResults)
+      
+    # Plot showing number differentially abundant in each comparison and direction of change
+      output$flag_plot <- renderPlot({
+        plot(diffabun_res(), type = "flag")
+      })
+      
+    # Heatmap showing the log2foldchanges of differentially abundant features
+      output$logfc_plot <- renderPlot({
+        plot(diffabun_res(), type = "logfc")
+      })
+      
+    # Plot showing log fold changes and p-values of all features, grouped by taxonomy
+      output$plot_all_da <- renderPlot({
+        pmartRseq::plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2", x_lab = "Phylum")
+      })
     })
     
     ################ Indicator Species Tab #################
@@ -729,29 +768,48 @@ shinyServer(function(input, output, session) {
                   value = 0.05)
     })
 
-    indsp_res <- reactive({
-      return(pmartRseq::indsp_calc(omicsData = normalized_data(), within = input$within, pval_thresh = input$is_pval_thresh))
+    observeEvent(input$submit_is, {
+      indsp_res <- reactive({
+        return(pmartRseq::indsp_calc(omicsData = normalized_data(), within = input$within, pval_thresh = input$is_pval_thresh))
+      })
+  
+      output$indsp_res <- DT::renderDataTable(indsp_res())
+  
+  
+      output$indsp_xaxis <- renderUI({
+        selectInput("indsp_xaxis",
+                    label = "X-Axis for Indicator Species Plot",
+                    choices = colnames(attr(normalized_data(),"group_DF"))[-which(colnames(attr(normalized_data(),"group_DF"))==attr(normalized_data(),"cnames")$fdata_cname)],
+                    selected = "Group")
+      })
+  
+      output$indsp_group <- renderUI({
+        selectInput("indsp_group",
+                    label = "Fill Variable for Indicator Species Plot",
+                    choices = colnames(normalized_data()$e_meta),
+                    selected = colnames(normalized_data()$e_meta)[3])
+      })
+  
+      output$indsp_plot <- renderPlot({
+        pmartRseq::plot_indsp(indsp = indsp_res(), omicsData = normalized_data(), x_axis = input$indsp_xaxis, group = input$indsp_group)
+      })
     })
-
-    output$indsp_res <- DT::renderDataTable(indsp_res())
-
-
-    output$indsp_xaxis <- renderUI({
-      selectInput("indsp_xaxis",
-                  label = "X-Axis for Indicator Species Plot",
-                  choices = colnames(attr(normalized_data(),"group_DF"))[-which(colnames(attr(normalized_data(),"group_DF"))==attr(normalized_data(),"cnames")$fdata_cname)],
-                  selected = "Group")
+    
+    
+    ################ Stats Results Tab #################
+    #----------- differential abundance ----------#
+    diffres <- reactive({
+      t1 <- diffabun_res()$allResults[,grep("Flag",colnames(diffabun_res()$allResults))]
+      t1 <- t1[-which(rowSums(abs(t1), na.rm=TRUE) == 0),]
+      return(t1)
     })
-
-    output$indsp_group <- renderUI({
-      selectInput("indsp_group",
-                  label = "Fill Variable for Indicator Species Plot",
-                  choices = colnames(normalized_data()$e_meta),
-                  selected = colnames(normalized_data()$e_meta)[3])
+    
+    #----------- indicator species ----------#
+    isres <- reactive({
+      t1 <- indsp_res()[,grep("Flag", colnames(indsp_res()))]
+      t1 <- t1[-which(rowSums(abs(t1), na.rm=TRUE) == 0),]
+      return(t1)
     })
-
-    output$indsp_plot <- renderPlot({
-      pmartRseq::plot_indsp(indsp = indsp_res(), omicsData = normalized_data(), x_axis = input$indsp_xaxis, group = input$indsp_group)
-    })
+    
     
 }) #end server

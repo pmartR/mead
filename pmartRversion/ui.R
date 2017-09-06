@@ -89,6 +89,12 @@ shinyUI(navbarPage(
            br()
    ),
    
+ tabPanel("Outliers",
+          p("Use the Jaccard Index to look for other outliers in the dataset."),
+          br(),
+          plotOutput("jac_plot")
+   ),
+ 
   tabPanel("Normalization",
            h2("Which normalization function to use?"),
            uiOutput("normFunc"),
@@ -122,6 +128,10 @@ shinyUI(navbarPage(
   tabPanel("Ordination",
            h3("Parameters"),
            uiOutput("beta_index"),
+           actionButton(
+             inputId = "submit_goe",
+             label = "Submit"
+           ),
            plotOutput("dimcheck"),
            #uiOutput("ord_method"),
            fluidRow(
@@ -131,6 +141,10 @@ shinyUI(navbarPage(
            fluidRow(
              column(width=3, uiOutput("ord_colors")),
              column(width=3, uiOutput("ord_y"))
+           ),
+           actionButton(
+             inputId = "submit_ord",
+             label = "Submit"
            ),
            uiOutput("ellipses"),
            #DT::dataTableOutput("beta"),
@@ -142,6 +156,11 @@ shinyUI(navbarPage(
           uiOutput("da_index"),
           uiOutput("pval_adjust"),
           uiOutput("pval_thresh"),
+          uiOutput("comparisons"),
+          actionButton(
+            inputId = "submit_da",
+            label = "Submit"
+              ),
           DT::dataTableOutput("da_res"),
           plotOutput("flag_plot"),
           plotOutput("logfc_plot"),
@@ -151,6 +170,10 @@ shinyUI(navbarPage(
           h3("Parameters"),
           uiOutput("within"),
           uiOutput("is_pval_thresh"),
+          actionButton(
+            inputId = "submit_is",
+            label = "Submit"
+          ),
           DT::dataTableOutput("indsp_res"),
           uiOutput("indsp_xaxis"),
           uiOutput("indsp_group"),
