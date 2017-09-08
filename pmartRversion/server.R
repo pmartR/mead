@@ -396,19 +396,12 @@ shinyServer(function(input, output, session) {
     normalized_data <- reactive({
       validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
       validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css","none"), "Normalization function must be one of the options specified."))
-      if(input$normFunc == "none"){
-        return(pmartRseq::split_emeta(groupDF(), cname="OTU", split1=NULL, numcol=7, split2="__", num=2, newnames=NULL))
-      }else{
-        return(pmartRseq::split_emeta(pmartRseq::normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=TRUE), cname="OTU", split1=NULL, numcol=7, split2="__", num=2, newnames=NULL))
-      }
+
+      return(pmartRseq::split_emeta(pmartRseq::normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=TRUE), cname="OTU", split1=NULL, numcol=7, split2="__", num=2, newnames=NULL))
     })
     
   # Look at normalized results
     output$normData <- DT::renderDataTable(normalized_data()$e_data, rownames = FALSE)
-    
-    # normalized_data <- reactive({
-    #   return(pmartRseq::split_emeta(omicsData=normalized_data(), cname="OTU", split1=NULL, numcol=7, split2="__", num=2, newnames=NULL))
-    # })
 
   # Try to make a stacked bar plot - not working right now
     output$norm_plot <- renderPlot({
@@ -707,17 +700,8 @@ shinyServer(function(input, output, session) {
       norm_factors <- reactive({
         validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
         validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css","none"), "Normalization function must be one of the options specified."))
-        if(input$normFunc == "none"){
-          newfcs <- rep(1, nrow(attr(groupDF(),"group_DF")))
-          names(newfcs) <- attr(groupDF(), "group_DF")[,attr(groupDF(),"cnames")$fdata_cname]
-          return(newfcs)
-        }else if(input$normFunc == "rarefy"){
-          newfcs <- rep(1, nrow(attr(groupDF(),"group_DF")))
-          names(newfcs) <- attr(groupDF(), "group_DF")[,attr(groupDF(),"cnames")$fdata_cname]
-          return(newfcs)
-        }else{
-          return(pmartRseq::normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=FALSE))
-        }
+
+        return(pmartRseq::normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=FALSE))
       })
       
       comps <- reactive({
@@ -734,11 +718,8 @@ shinyServer(function(input, output, session) {
         validate(need(length(input$da_index) == 1, "Need to specify a differential abundance test"))
         validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
         
-        if(input$normFunc == "rarefy" | input$normFunc == "none"){
-          return(pmartRseq::countSTAT(omicsData = normalized_data(), norm_factors = norm_factors(), comparisons = comps(), control = NULL, test = input$da_index, pval_adjust = input$pval_adjust, pval_thresh = 0.05))
-        }else{
-          return(pmartRseq::countSTAT(omicsData = groupDF(), norm_factors = norm_factors()$scale_param, comparisons = comps(), control = NULL, test = input$da_index, pval_adjust = input$pval_adjust, pval_thresh = 0.05))
-        }
+        return(pmartRseq::countSTAT(omicsData = groupDF(), norm_factors = norm_factors()$scale_param, comparisons = comps(), control = NULL, test = input$da_index, pval_adjust = input$pval_adjust, pval_thresh = 0.05))
+
       })
       
     # Look at the results - this is hard to look at, maybe remove?
