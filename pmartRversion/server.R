@@ -746,8 +746,8 @@ shinyServer(function(input, output, session) {
     output$within <- renderUI({
       selectInput("within",
                   label = "Perform indicator species analysis between groups within a variable",
-                  choices = c(NULL,colnames(attr(normalized_data(),"group_DF"))[-which(colnames(attr(normalized_data(),"group_DF")) %in% c("Group",attr(normalized_data(),"cnames")$fdata_cname))]),
-                  selected = NULL)
+                  choices = c("NA",colnames(attr(normalized_data(),"group_DF"))[-which(colnames(attr(normalized_data(),"group_DF")) %in% c("Group",attr(normalized_data(),"cnames")$fdata_cname))]),
+                  selected = "NA")
     })
 
     output$is_pval_thresh <- renderUI({
@@ -761,7 +761,11 @@ shinyServer(function(input, output, session) {
 
     observeEvent(input$submit_is, {
       indsp_res <- reactive({
-        return(pmartRseq::indsp_calc(omicsData = normalized_data(), within = input$within, pval_thresh = input$is_pval_thresh))
+        if(input$within == "NA"){
+          return(pmartRseq::indsp_calc(omicsData = normalized_data(), within = NULL, pval_thresh = input$is_pval_thresh))
+        }else{
+          return(pmartRseq::indsp_calc(omicsData = normalized_data(), within = input$within, pval_thresh = input$is_pval_thresh))
+        }
       })
   
       output$indsp_res <- DT::renderDataTable(indsp_res())
