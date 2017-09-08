@@ -301,18 +301,23 @@ shinyServer(function(input, output, session) {
   
   # ################ Group Designation Tab #################
 
+  group_vars <- reactive({
+    intersect(which(lapply(apply(filtered_data()$f_data, 2, function(z) table(z))[unlist(lapply(apply(filtered_data()$f_data, 2, function(x) table(x)), function(y) any(is.finite(y))))], function(w) max(w)) > 2), which(apply(filtered_data()$f_data, 2, function(v) length(unique(v))) > 2))
+    
+  })
+  
   # Input main effects used for groupings
     output$group1 <- renderUI({
       selectInput("group1",
                   label = "Main Effect 1",
-                  choices = colnames(filtered_data()$f_data))
+                  choices = colnames(filtered_data()$f_data)[group_vars()])
     })
     
   # Can have up to 2 main effects
     output$group2 <- renderUI({
       selectInput("group2",
                   label = "Main Effect 2",
-                  choices = c("NA",colnames(filtered_data()$f_data)),
+                  choices = c("NA",colnames(filtered_data()$f_data)[group_vars()]),
                   selected = NULL)
       #groupDesignation
     })
