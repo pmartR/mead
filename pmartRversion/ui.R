@@ -174,10 +174,23 @@ shinyUI(navbarPage(
             inputId = "submit_is",
             label = "Submit"
           ),
-          DT::dataTableOutput("indsp_res"),
+          DT::dataTableOutput("indsp_results"),
           uiOutput("indsp_xaxis"),
           uiOutput("indsp_group"),
           plotOutput("indsp_plot")),
+ 
+ tabPanel("Statistics Results",
+          conditionalPanel(
+            condition = "input.submit_is == TRUE && input.submit_da == TRUE",
+            DT::dataTableOutput("stats_res")
+          )
+          #plotOutput("newisplot")
+          #if(exists(indsp_res()) & exists(diffabun_res())){
+          #  DT::dataTableOutput("stats_res")
+          # }else{
+          #   p("This page is for combining the results of differential abundance analysis and indicator species analysis.")
+          # }
+          ),
   
  tabPanel("Meg's Tab",
           uiOutput("megs_output"))

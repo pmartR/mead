@@ -719,7 +719,7 @@ shinyServer(function(input, output, session) {
       })
       
     # Perform differential abundance analysis
-      diffabun_res <- reactive({
+      diffabun_res <<- reactive({
         validate(need(length(input$da_index) == 1, "Need to specify a differential abundance test"))
         validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
         
@@ -744,7 +744,7 @@ shinyServer(function(input, output, session) {
       output$plot_all_da <- renderPlot({
         pmartRseq::plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2", x_lab = "Phylum")
       })
-    })
+    }, autoDestroy = FALSE)
     
     ################ Indicator Species Tab #################
     #----------- indicator species ----------#
@@ -765,7 +765,7 @@ shinyServer(function(input, output, session) {
     })
 
     observeEvent(input$submit_is, {
-      indsp_res <- reactive({
+      indsp_res <<- reactive({
         if(input$within == "NA"){
           return(pmartRseq::indsp_calc(omicsData = normalized_data(), within = NULL, pval_thresh = input$is_pval_thresh))
         }else{
@@ -773,7 +773,7 @@ shinyServer(function(input, output, session) {
         }
       })
   
-      output$indsp_res <- DT::renderDataTable(indsp_res())
+      output$indsp_results <- DT::renderDataTable(indsp_res())
   
   
       output$indsp_xaxis <- renderUI({
@@ -793,23 +793,79 @@ shinyServer(function(input, output, session) {
       output$indsp_plot <- renderPlot({
         pmartRseq::plot_indsp(indsp = indsp_res(), omicsData = normalized_data(), x_axis = input$indsp_xaxis, group = input$indsp_group)
       })
-    })
+    }, autoDestroy = FALSE)
     
     
     ################ Stats Results Tab #################
-    #----------- differential abundance ----------#
-    diffres <- reactive({
-      t1 <- diffabun_res()$allResults[,grep("Flag",colnames(diffabun_res()$allResults))]
-      t1 <- t1[-which(rowSums(abs(t1), na.rm=TRUE) == 0),]
-      return(t1)
-    })
-    
-    #----------- indicator species ----------#
-    isres <- reactive({
-      t1 <- indsp_res()[,grep("Flag", colnames(indsp_res()))]
-      t1 <- t1[-which(rowSums(abs(t1), na.rm=TRUE) == 0),]
-      return(t1)
-    })
+    #if(exists(indsp_res()) & exists(diffabun_res())){
+      #----------- differential abundance ----------#
+      diffres <- reactive({
+        t1 <- diffabun_res()$allResults[,grep("Flag",colnames(diffabun_res()$allResults))]
+        if(is.null(ncol(t1))){
+          t1 <- data.frame(OTU=rownames(diffabun_res()$allResults), t1)
+          rownames(t1) <- t1$OTU
+          colnames(t1)[1] <- attr(normalized_data(), "cnames")$edata_cname
+          colnames(t1)[2] <- colnames(diffabun_res()$allResults)[grep("Flag",colnames(diffabun_res()$allResults))]
+        }else{
+          t1 <- t1[-which(rowSums(abs(t1), na.rm=TRUE) == 0),]
+        }
+        return(t1)
+      })
+      
+      #----------- indicator species ----------#
+      isres <- reactive({
+        t1 <- indsp_res()[,grep("Flag", colnames(indsp_res()))]
+        if(is.null(ncol(t1))){
+          t1 <- data.frame(OTU=rownames(indsp_res()), t1)
+          rownames(t1) <- t1$OTU
+          colnames(t1)[1] <- attr(normalized_data(), "cnames")$edata_cname
+          colnames(t1)[2] <- colnames(indsp_res())[grep("Flag",colnames(indsp_res()))]
+        }else{
+          t1 <- t1[-which(rowSums(abs(t1), na.rm=TRUE) == 0),]
+        }
+        return(t1)
+      })
+      
+      #----------- combine results ----------#
+      statsres <- reactive({
+        if(is.null(attr(indsp_res(), "within"))){
+          res <- intersect(rownames(diffres()), rownames(isres()))
+          res <- data.frame(res)
+          colnames(res)[1] <- attr(normalized_data(), "cnames")$edata_cname
+          return(res)
+        }else{
+          res <- lapply(unique(normalized_data()$f_data[,attr(indsp_res(), "within")]), function(x){
+            da <- diffres()[,grep(x, colnames(diffres()))]
+            da <- da[-which(rowSums(abs(da)) == 0),]
+            is <- isres()[,grep(x, colnames(isres()))]
+            is <- data.frame(OTU=rownames(isres()),is)
+            rownames(is) <- rownames(isres())
+            is <- is[which(abs(is[,-1]) > 0),]
+            res <- intersect(rownames(da), rownames(is))
+            res <- data.frame(Within=x, OTU=res)
+            return(res)
+          })
+          res <- do.call(rbind, res)
+          colnames(res)[which(colnames(res) == "Within")] <- attr(indsp_res(), "within")
+          colnames(res)[which(colnames(res) == "OTU")] <- attr(normalized_data(), "cnames")$edata_cname
+          return(res)
+        }
+      })
+      
+      taxares <- reactive({
+        res <- merge(statsres(), normalized_data()$e_meta, by=attr(normalized_data(), "cnames")$edata_cname)
+        return(res)
+      })
+      
+      output$stats_res <- DT::renderDataTable(taxares())
+      output$newisplot <- renderPlot({
+        pmartRseq::plot_indsp(indsp = indsp_res(), omicsData = normalized_data(), x_axis = input$indsp_xaxis, group = input$indsp_group)
+      })
+      output$newdaplot <- renderPlot({
+        pmartRseq::plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2", x_lab = "Phylum")
+      })
+    #}
+
     
     
 }) #end server
