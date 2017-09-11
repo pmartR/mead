@@ -2,22 +2,32 @@ kovera_k <- 0
 kovera_A <- 0
 source("./functions/helper_functions.R")
 
-shinyUI(navbarPage(
-  title = (windowTitle = "mead"),
- # titlePanel(div(img(src = "Honey_Jar.png", height = 33, width = 22), "mead")),
+shinyUI(navbarPage(title = (windowTitle = "mead"),
+
   
-  tabPanel("Data and Filtering", 
-  fluidRow(
-    column(width = 12, 
-           tags$hr(),
-           h3("Load Data"),
-           fluidRow(
-             column(width = 4, fileInput('biom', 'Choose BIOM File')),
-             column(width = 4, fileInput('fasta', 'Choose FASTA file')),
-             column(width = 4, fileInput('qiime', 'Choose Sample Metadata QIIME'))
-           )
-    )
-  ),
+ # titlePanel(div(img(src = "Honey_Jar.png", height = 33, width = 22), "mead")),
+ 
+
+ tabPanel("Data and Filtering", 
+          tags$head(
+            # tags$style(HTML("
+            #                  .shiny-output-error-validation {
+            #                  color: #D8000C;
+            #                  }
+            #                  "))
+          ),
+          
+          fluidRow(
+            column(width = 12, 
+                   tags$hr(),
+                   h3("Load Data"),
+                   fluidRow(
+                     column(width = 4, fileInput('biom', 'Choose BIOM File')),
+                     column(width = 4, fileInput('fasta', 'Choose FASTA file')),
+                     column(width = 4, fileInput('qiime', 'Choose Sample Metadata QIIME'))
+                   )
+            )
+          ),
   h3("Full Metadata"),
   tags$table(
     DT::dataTableOutput("sample_metadata"),
@@ -31,9 +41,13 @@ shinyUI(navbarPage(
   #   )),
   h3("Sample Filtering"),
   h4("Keep samples with specific metadata"),
-  uiOutput("plots"),
+  # uiOutput("plots"),
   br(),
-  uiOutput("boxes"),
+  fluidRow(
+    column(width = 6, uiOutput("boxes")),
+    column(width = 6, uiOutput("plots"))
+    ),
+  #uiOutput("boxes"),
   fluidRow(
     actionButton("metadata_reset_button", label = "Reset Meta Filter", icon = icon("trash")),
     actionButton("metadata_filter_go", label = "Apply Meta Filter", icon = icon("bar-chart"))
