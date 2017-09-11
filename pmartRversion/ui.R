@@ -89,22 +89,48 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
               column(width=3, uiOutput("group2"))
               ),
            #actionButton("covs","Add Covariates"),
-           h3("Covariates"),
-           fluidRow(
-             column(width=3, uiOutput("cov1")),
-             column(width=3, uiOutput("cov2"))
-           ),
+           # h3("Covariates"),
+           # fluidRow(
+           #   column(width=3, uiOutput("cov1")),
+           #   column(width=3, uiOutput("cov2"))
+           # ),
            #uiOutput("cov1"),
            #uiOutput("cov2"),
            # fluidRow(
            #   actionButton("groupDF_reset_button", label = "Reset Groupings", icon = icon("trash")),
            #   actionButton("groupDF_go", label = "Apply Groupings", icon = icon("check"))
            # ),
-           DT::dataTableOutput("group_DF")
+           p("The following table shows which group each sample belongs to."),
+           DT::dataTableOutput("group_DF"),
+           br(),
+           p("The following table shows the number of samples in each group."),
+           DT::dataTableOutput("group_tab"),
+           br()
    ),
-  # 
-  # tabPanel("Normalization",
-  #          br()),
+   
+ tabPanel("Outliers",
+          p("Use the Jaccard Index to look for other outliers in the dataset."),
+          br(),
+          plotOutput("jac_plot")
+   ),
+ 
+  tabPanel("Normalization",
+           h2("Which normalization function to use?"),
+           uiOutput("normFunc"),
+           #actionButton("normGo","Normalize Data"),
+           DT::dataTableOutput("normData"),
+           br(),
+           h4("Richness vs Abundance"),
+           p("The normalization should reduce the correlation between richness
+             and abundance. If it doesn't appear to, a different normalization
+             function might be preferable."),
+           fluidRow(
+             splitLayout(cellWidths = c("50%","50%"), 
+                         plotOutput("ra_raw"),
+                         plotOutput("ra_norm"))
+           ),
+           plotOutput("norm_plot")
+  ),
   
   tabPanel("Community Metrics",
            h3("Plot Parameters"),
@@ -117,6 +143,73 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
            h3("Richness"),
            uiOutput("rich_index"),
            plotOutput("rich_plot")),
+ 
+  tabPanel("Ordination",
+           h3("Parameters"),
+           uiOutput("beta_index"),
+           actionButton(
+             inputId = "submit_goe",
+             label = "Submit"
+           ),
+           plotOutput("dimcheck"),
+           #uiOutput("ord_method"),
+           fluidRow(
+             column(width=3, uiOutput("k")),
+             column(width=3, uiOutput("ord_x"))
+           ),
+           fluidRow(
+             column(width=3, uiOutput("ord_colors")),
+             column(width=3, uiOutput("ord_y"))
+           ),
+           actionButton(
+             inputId = "submit_ord",
+             label = "Submit"
+           ),
+           uiOutput("ellipses"),
+           #DT::dataTableOutput("beta"),
+           #DT::dataTableOutput("mydist"),
+           plotOutput("ord_plot")),
+ 
+ tabPanel("Differential Abundance",
+          h3("Parameters"),
+          uiOutput("da_index"),
+          uiOutput("pval_adjust"),
+          uiOutput("pval_thresh"),
+          uiOutput("comparisons"),
+          actionButton(
+            inputId = "submit_da",
+            label = "Submit"
+              ),
+          DT::dataTableOutput("da_res"),
+          plotOutput("flag_plot"),
+          plotOutput("logfc_plot"),
+          plotOutput("plot_all_da")),
+ 
+ tabPanel("Indicator Species",
+          h3("Parameters"),
+          uiOutput("within"),
+          uiOutput("is_pval_thresh"),
+          actionButton(
+            inputId = "submit_is",
+            label = "Submit"
+          ),
+          DT::dataTableOutput("indsp_results"),
+          uiOutput("indsp_xaxis"),
+          uiOutput("indsp_group"),
+          plotOutput("indsp_plot")),
+ 
+ tabPanel("Statistics Results",
+          conditionalPanel(
+            condition = "input.submit_is == TRUE && input.submit_da == TRUE",
+            DT::dataTableOutput("stats_res")
+          )
+          #plotOutput("newisplot")
+          #if(exists(indsp_res()) & exists(diffabun_res())){
+          #  DT::dataTableOutput("stats_res")
+          # }else{
+          #   p("This page is for combining the results of differential abundance analysis and indicator species analysis.")
+          # }
+          ),
   
  tabPanel("Meg's Tab",
           uiOutput("megs_output"))
