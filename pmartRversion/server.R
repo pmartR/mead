@@ -6,6 +6,7 @@
 #
 
 library(shiny)
+library(lazyeval)
 library(DT)
 library(dplyr)
 library(filterWidget)
@@ -24,13 +25,13 @@ shinyServer(function(input, output, session) {
       need(input$biom != "", "Please select a biom file")
     )
     validate(
-      need(grepl(".biom", as.character(input$biom$name)), "Biom file must be in .biom format"), errorClass = "red"
+      need(grepl(".biom", as.character(input$biom$name)), "Biom file must be in .biom format")
     )
 
     validate(
       need(input$qiime != "", "Please select a qiime file")
     )
-    return(pmartRseq::as.rRNAdata(e_data = as.character(input$biom$datapath), f_data = as.character(input$qiime$datapath), edata_cname = "OTU"))
+    return(pmartRseq::as.seqData(e_data = as.character(input$biom$datapath), f_data = as.character(input$qiime$datapath), edata_cname = "OTU", data_type = 'rRNA'))
   }) #end rRNAobj
 
   #-------- filter history support -----------#
@@ -71,23 +72,24 @@ shinyServer(function(input, output, session) {
     # no sample filter yet
     if (input$sample_filter_go == 0) {
       filtered_rRNA_obj <<- filt1
-      return(filtered_rRNA_obj)
+     # return(filtered_rRNA_obj)
     } else {
       # apply sample filter
       isolate({
         filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$sample[[input$sample_filter_go]],
                                                   omicsData = filt1,
                                                   upper_lim = input$n)
-        return(filtered_rRNA_obj)
+        #return(filtered_rRNA_obj)
       })
     }
     
     # no sample metadata filter yet
     if (input$metadata_filter_go == 0) {
       filtered_rRNA_obj <<- filt1
-      return(filtered_rRNA_obj)
+      #return(filtered_rRNA_obj)
     } 
-    if (input$metadata_filter_go > 0) {
+   
+    if (input$metadata_filter_go != 0) {
       # apply a metadata filter
      isolate({
         # get the intersection of the samples left after checkbox groups are removed
@@ -103,18 +105,23 @@ shinyServer(function(input, output, session) {
         }
         sample_names <- list()
         for (i in 1:length(check_boxes)) {
-          print(check_boxes[i])
-          #   temp <- pmartRseq::applyFilt(sample_metadata_filter_obj(), rRNAobj(), samps_to_remove = )
-          sample_names[[i]] <- dplyr::group_by_(temp, check_boxes[i]) %>%
-          dplyr::filter_(check_boxes[i] %in% input[[check_boxes[i]]]) %>%
+          # build in a check for no samples to remove
+          # if (length(check_boxes[i]) == 0){
+          #   return(filtered_rRNA_obj)
+          # }
+          sample_names[[i]] <- dplyr::filter_(temp, interp(~v%in%input[[check_boxes[i]]], v=as.name(check_boxes[i]))) %>%
           dplyr::select_(attr(filtered_rRNA_obj, "cnames")$fdata_cname)#find the column name and associated check box
         }
         sample_names <- Reduce(intersect, sample_names)
+        to_remove <- temp[ which(!(as.character(temp[, attr(filtered_rRNA_obj, "cnames")$fdata_cname]) %in% as.character(unlist(sample_names)))),
+                           attr(filtered_rRNA_obj, "cnames")$fdata_cname]
         
-        
+      
         filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$metadata[[input$metadata_filter_go]],
                                                    omicsData = filt1,
-                                                   samps_to_remove = sample_names)
+                                                   samps_to_remove = to_remove)
+        
+        return(filtered_rRNA_obj)
       })
     }
   })
@@ -181,9 +188,8 @@ shinyServer(function(input, output, session) {
     validate(
       need(!(is.null(rRNAobj()$f_data)), message = "rRNA object fail. Check to make sure file paths are correct")
     )
-    # validate(
-    #   need(input$qiime$datapath != "", "Please select a QIIME file")
-    # )
+    input$metadata_filter_go
+    input$metadata_reset_button
     if (is.null(input$qiime)) {
       return(NULL)
     }else{
@@ -194,29 +200,40 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  observeEvent(input$qiime, 
-               output$sample_metadata <- DT::renderDataTable(
-                 data.frame(  metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
-                 options = list(columnDefs = list(list(
-                   targets = c(1:(ncol((metadata_obj())) - 1)),
-                   render = JS(
-                     "function(data, type, row, meta) {",
-                     "return type === 'display' && data.length > 10 ?",
-                     "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
-                     "}")
-                 ))), callback = JS('table.page(3).draw(false);'))
-  )
+  
+  output$sample_metadata <- DT::renderDataTable(
+    data.frame(metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
+    options = list(columnDefs = list(list(
+      targets = c(1:(ncol((metadata_obj())) - 1)),
+      render = JS(
+        "function(data, type, row, meta) {",
+        "return type === 'display' && data.length > 10 ?",
+        "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
+        "}")
+    ))), callback = JS('table.page(3).draw(false);'))
+  
   
   #---- Charts for f_meta filtering -------#
   # 
   sample_metadata_filter_obj <- reactive({
     return(pmartRseq::sample_based_filter(omicsData = rRNAobj(), fn = "criteria"))
   })
+  observeEvent(input$metadata_reset_button, {
+    output$sample_metadata <- DT::renderDataTable(
+      rRNAobj()$f_data, rownames = FALSE, class = 'cell-border stripe compact hover',
+      options = list(columnDefs = list(list(
+        targets = c(1:(ncol((metadata_obj())) - 1)),
+        render = JS(
+          "function(data, type, row, meta) {",
+          "return type === 'display' && data.length > 10 ?",
+          "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
+          "}")
+      ))), callback = JS('table.page(3).draw(false);'))  })
   
-  observeEvent(metadata_obj(), {
+  observeEvent(rRNAobj(), {
     # If the metadata has been loaded, create the charts
     output$plots <- renderUI({get_plot_output_list(metadata_obj())})
-    output$boxes <- renderUI({get_checkbox_output_list(metadata_obj())})
+    output$boxes <- renderUI({get_checkbox_output_list(rRNAobj()$f_data)})
     # Initialize new_metadata_obj object. If no metadata filtering then it's a copy of metadata_obj.
     # If metadata filtering, will be overwritten with filters 
 
@@ -224,8 +241,9 @@ shinyServer(function(input, output, session) {
     # If that change is observed, subset new_metadata_obj and 
     # create subsetted charts and table
     observeEvent(input$selected_indices, {
-
       new_metadata_obj <- reactive({
+        print(input$selected_indices)
+        
         return(metadata_obj()[input$selected_indices + 1, ]) # add one because javascript is zero-indexed
       })
       output$plots <- renderUI({get_plot_output_list(new_metadata_obj())})
@@ -259,6 +277,10 @@ shinyServer(function(input, output, session) {
           "}")
       ))), callback = JS('table.page(3).draw(false);'))
   }) 
+  observeEvent(input$metadata_reset_button, {
+    output$boxes <- renderUI({get_checkbox_output_list(rRNAobj()$f_data)})
+  })
+
   # end sample metadata filtering
   
   #--------------- k over a filtering  -----------------#
