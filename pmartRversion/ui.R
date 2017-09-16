@@ -210,6 +210,11 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
           #   p("This page is for combining the results of differential abundance analysis and indicator species analysis.")
           # }
           ),
+ 
+ tabPanel("Download",
+          uiOutput("files_to_download"),
+          downloadButton("downloadData","Download")
+          ),
   
  tabPanel("Meg's Tab",
           uiOutput("megs_output"))
