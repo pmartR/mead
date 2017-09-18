@@ -353,6 +353,7 @@ shinyServer(function(input, output, session) {
  
 
   filtered_data <- reactive({
+    input$metadata_filter_go
     # observe({
     #   filtered_rRNA_obj
     ################# JSON object for Meg #################
