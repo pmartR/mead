@@ -16,6 +16,7 @@ library(vegan)
 library(goeveg)
 source("./functions/helper_functions.R")
 source("./functions/test_functions.R")
+#source("./Report/R/report.R")
 
 #Sys.setenv(R_ZIPCMD="/usr/bin/zip")
 
@@ -941,11 +942,11 @@ shinyServer(function(input, output, session) {
                                           "outliers"="outliers","normalized"="normalized",
                                           "alphadiv"="alphadiv","richness"="richness","ordination"="ordination",
                                           "diffabun"="diffabun","indicspec"="indicspec",
-                                          "combined"="combined"),
+                                          "combined"="combined"),#"REPORT"="report"),
                            selected = c("raw","filtered","groupings",
                                         "outliers","normalized",
                                         "alphadiv","richness","ordination",
-                                        "diffabun","indicspec","combined"))
+                                        "diffabun","indicspec","combined"))#,"report"))
       })
       
       output$downloadData <- downloadHandler(
@@ -956,57 +957,63 @@ shinyServer(function(input, output, session) {
           print(tempdir())
           
           fs <- vector()
-          rep <- vector()
+          rep <- list()
           if("raw" %in% input$files_to_download){
             fs <- c(fs, "raw.csv")
-            rep <- c(rep, "raw")
+            rep <- rRNAobj()
             write.csv(rRNAobj()$e_data, file="raw.csv")
           }
           if("filtered" %in% input$files_to_download){
             fs <- c(fs, "filtered.csv")
-            rep <- c(rep, "filtered")
+            rep <- filtered_data()
+            #rep <- c(rep, "filtered")
             write.csv(filtered_data()$e_data, file="filtered.csv")
           }
           if("groupings" %in% input$files_to_download){
-            rep <- c(rep, "groupings")
+            #rep <- c(rep, "groupings")
             fs <- c(fs, "groupings.csv")
             write.csv(group_df_tab(), file="groupings.csv")
           }
-          if("outliers" %in% input$files_to_download){
-            rep <- c(rep, "outliers")
-            fs <- c(fs, "outliers.png")
-            ggsave(jac_plot_obj(), filename="outliers.png", device="png")
-          }
           if("normalized" %in% input$files_to_download){
-            rep <- c(rep, "normalized")
+            #rep <- c(rep, "normalized")
+            rep <- normalized_data()
             fs <- c(fs, "normalized.csv", "normalized.png", "abun_rich_raw.png", "abun_rich_norm.png")
             write.csv(normalized_data()$e_data, file="normalized.csv")
             ggsave(norm_plot_obj(), filename = "normalized.png", device="png")
             ggsave(ra_raw_plot(), filename="abun_rich_raw.png", device="png")
             ggsave(ra_norm_plot(), filename="abun_rich_norm.png", device="png")
           }
+          if("outliers" %in% input$files_to_download){
+            #rep <- c(rep, "outliers")
+            rep <- c(rep, outlier_jaccard())
+            fs <- c(fs, "outliers.png")
+            ggsave(jac_plot_obj(), filename="outliers.png", device="png")
+          }
           if("alphadiv" %in% input$files_to_download){
             fs <- c(fs, "alphadiv.csv", "alphadiv.png")
-            rep <- c(rep, "alphadiv")
+            #rep <- c(rep, "alphadiv")
+            rep <- c(rep, a_div())
             write.csv(a_div(), file="alphadiv.csv")
             ggsave(adiv_plot_obj(), filename="alphadiv.png", device="png")
           }
           if("richness" %in% input$files_to_download){
             fs <- c(fs, "rich.csv", "rich.png")
-            rep <- c(rep, "rich")
+            #rep <- c(rep, "rich")
+            rep <- c(rep, rich())
             write.csv(rich(), file="rich.csv")
             ggsave(rich_plot_obj(), filename="rich.png", device="png")
           }
           if("ordination" %in% input$files_to_download){
             #fs <- c(fs, "dimcheck.png", "ordplot.png")
             fs <- c(fs, "ordplot.png")
-            rep <- c(rep, "ordination")
+            #rep <- c(rep, "ordination")
             #ggsave(dimcheck_obj(), filename="dimcheck.png", device="png")
             ggsave(ord_plot_obj(), filename="ordplot.png", device="png")
           }
           if("diffabun" %in% input$files_to_download){
             fs <- c(fs, "diffabun.csv", "daflag.png", "dalogfc.png", "allda.png")
-            rep <- c(rep, "diffabun")
+            #rep <- c(rep, "diffabun")
+            rep <- c(rep, diffabun_res())
             write.csv(diffabun_res()$allResults, file="diffabun.csv")
             ggsave(da_flag_plot_obj(), filename="daflag.png", device="png")
             ggsave(da_logfc_plot_obj(), filename="dalogfc.png", device="png")
@@ -1014,7 +1021,8 @@ shinyServer(function(input, output, session) {
           }
           if("indicspec" %in% input$files_to_download){
             fs <- c(fs, "indicspec.csv", "indsp.png")
-            rep <- c(rep, "indicspec")
+            #rep <- c(rep, "indicspec")
+            rep <- c(rep, indsp_res())
             write.csv(indsp_res(), file="indicspec.csv")
             ggsave(indsp_plot_obj(), filename="indsp.png", device="png")
           }
@@ -1022,6 +1030,13 @@ shinyServer(function(input, output, session) {
             fs <- c(fs, "combined.csv")
             rep <- c(rep, "combined")
             write.csv(taxares(), file="combined.csv")
+          }
+          if("report" %in% input$files_to_download){
+            fs <- c(fs, "report.docx")
+            #pmartRseq::report(omicsData = rep, output_file = "report.docx")
+            data <- rep
+            classes <- unlist(lapply(data, class))
+            render("R/seqData_Report.Rmd", output_file="report.docx")
           }
           
           # fs <- c("raw.csv","filtered.csv","normalized.csv","diffabun.csv")
