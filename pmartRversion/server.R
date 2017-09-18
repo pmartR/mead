@@ -17,6 +17,8 @@ library(goeveg)
 source("./functions/helper_functions.R")
 source("./functions/test_functions.R")
 
+#Sys.setenv(R_ZIPCMD="/usr/bin/zip")
+
 filtered_rRNA_obj <- list()
 
 shinyServer(function(input, output, session) {
@@ -369,11 +371,17 @@ shinyServer(function(input, output, session) {
     
   # Show the groupings data frame
     #observeEvent(input$groupDF_go,
-    output$group_DF <- DT::renderDataTable(attr(groupDF(), "group_DF"))
+    group_df_tab <- reactive({
+      attr(groupDF(), "group_DF")
+    })
+    output$group_DF <- DT::renderDataTable(group_df_tab())
     #)
   
   # Also output a table showing the number of reps in each group
-    output$group_tab <- DT::renderDataTable(as.data.frame(table(attr(groupDF(), "group_DF")$Group)))
+    group_freq_tab <- reactive({
+      as.data.frame(table(attr(groupDF(),"group_DF")$Group))
+    })
+    output$group_tab <- DT::renderDataTable(group_freq_tab())
     
     
     # ################ Outliers Tab #################
@@ -382,8 +390,13 @@ shinyServer(function(input, output, session) {
       pmartRseq::jaccard_calc(omicsData = groupDF())
     })
     
-    output$jac_plot <- renderPlot({
+    jac_plot_obj <- reactive({
       plot(outlier_jaccard())
+    })
+    
+    output$jac_plot <- renderPlot({
+      #plot(outlier_jaccard())
+      print(jac_plot_obj())
     })
     
     
@@ -438,14 +451,22 @@ shinyServer(function(input, output, session) {
       return(suppressWarnings(pmartRseq::richness_calc(groupDF(), index="observed")))
     })
     
-  # Create a plot of raw abundance vs raw richness
-    output$ra_raw <- renderPlot({
+    ra_raw_plot <- reactive({
       plot(abun_raw(), rich_raw(), plot_title="Raw Data")
     })
+  # Create a plot of raw abundance vs raw richness
+    output$ra_raw <- renderPlot({
+      #plot(abun_raw(), rich_raw(), plot_title="Raw Data")
+      print(ra_raw_plot())
+    })
     
+    ra_norm_plot <- reactive({
+      plot(abun_norm(), rich_norm(), plot_title="Normalized Data")
+    })
   # Create a plot of normalized abundance vs normalized richness to see if there is a reduction in correlation
     output$ra_norm <- renderPlot({
-      plot(abun_norm(), rich_norm(), plot_title="Normalized Data")
+      #plot(abun_norm(), rich_norm(), plot_title="Normalized Data")
+      print(ra_norm_plot())
     })
     
     ################ Community Metrics Tab #################
@@ -485,9 +506,13 @@ shinyServer(function(input, output, session) {
       return(pmartRseq::alphaDiv_calc(groupDF(), index=input$adiv_index))
     })
   
+    adiv_plot_obj <- reactive({
+      plot(a_div(), x_axis=input$xaxis, color=input$color)
+    })
   # Show alpha diversity plot
     output$adiv_plot <- renderPlot({
-      plot(a_div(), x_axis=input$xaxis, color=input$color)
+      #plot(a_div(), x_axis=input$xaxis, color=input$color)
+      print(adiv_plot_obj())
     })
 
                
@@ -510,9 +535,13 @@ shinyServer(function(input, output, session) {
       return(pmartRseq::richness_calc(groupDF(), index=input$rich_index))
     })
      
+    rich_plot_obj <- reactive({
+      plot(rich(), x_axis=input$xaxis, color=input$color)
+    })
   # Show richness plot
     output$rich_plot <- renderPlot({
-      plot(rich(), x_axis=input$xaxis, color=input$color)
+      #plot(rich(), x_axis=input$xaxis, color=input$color)
+      print(rich_plot_obj())
     })
   
     
@@ -588,8 +617,12 @@ shinyServer(function(input, output, session) {
     })
     
     observeEvent(input$submit_goe, {
-      output$dimcheck <- renderPlot({
+      dimcheck_obj <<- reactive({
         goeveg::dimcheckMDS(vegdata(), distance = input$beta_index, autotransform = FALSE)
+      })
+      output$dimcheck <- renderPlot({
+        #goeveg::dimcheckMDS(vegdata(), distance = input$beta_index, autotransform = FALSE)
+        print(dimcheck_obj())
       })
     })
     
@@ -649,14 +682,20 @@ shinyServer(function(input, output, session) {
         
         return(vegan::metaMDS(vegdata(), distance = input$beta_index, k = input$k, autotransform = FALSE))
       })
+      
+      ord_plot_obj <<- reactive({
+        pmartRseq::pmartRseq_NMDS(res = vegmds(), omicsData = normalized_data(), grp = input$ord_colors, k = input$k, 
+                                  x_axis = input$ord_x, y_axis = input$ord_y, ellipses=input$ellipses)
+      })
     
     # Plot showing beta diversity
       output$ord_plot <- renderPlot({
         #if(input$ord_method == "NMDS"){
           # pmartRseq::pmartRseq_NMDS(res = vegmds(), 
           #           grp = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]),ellipses=input$ellipses)
-        pmartRseq::pmartRseq_NMDS(res = vegmds(), omicsData = normalized_data(), grp = input$ord_colors, k = input$k, 
-                                  x_axis = input$ord_x, y_axis = input$ord_y, ellipses=input$ellipses)
+        #pmartRseq::pmartRseq_NMDS(res = vegmds(), omicsData = normalized_data(), grp = input$ord_colors, k = input$k, 
+         #                         x_axis = input$ord_x, y_axis = input$ord_y, ellipses=input$ellipses)
+        print(ord_plot_obj())
         # }else if(input$ord_method == "PCA"){
         #   mead_PCA(XX = vegmds(),
         #            ZZ = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]))
@@ -734,19 +773,31 @@ shinyServer(function(input, output, session) {
     # Look at the results - this is hard to look at, maybe remove?
       output$da_res <- DT::renderDataTable(diffabun_res()$allResults)
       
-    # Plot showing number differentially abundant in each comparison and direction of change
-      output$flag_plot <- renderPlot({
+      da_flag_plot_obj <<- reactive({
         plot(diffabun_res(), type = "flag")
       })
-      
-    # Heatmap showing the log2foldchanges of differentially abundant features
-      output$logfc_plot <- renderPlot({
-        plot(diffabun_res(), type = "logfc")
+    # Plot showing number differentially abundant in each comparison and direction of change
+      output$flag_plot <- renderPlot({
+        #plot(diffabun_res(), type = "flag")
+        print(da_flag_plot_obj())
       })
       
+      da_logfc_plot_obj <<- reactive({
+        plot(diffabun_res(), type = "logfc")
+      })
+    # Heatmap showing the log2foldchanges of differentially abundant features
+      output$logfc_plot <- renderPlot({
+        #plot(diffabun_res(), type = "logfc")
+        print(da_logfc_plot_obj())
+      })
+      
+      plot_all_da_obj <<- reactive({
+        pmartRseq::plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2", x_lab = "Phylum")
+      })
     # Plot showing log fold changes and p-values of all features, grouped by taxonomy
       output$plot_all_da <- renderPlot({
-        pmartRseq::plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2", x_lab = "Phylum")
+        #pmartRseq::plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2", x_lab = "Phylum")
+        print(plot_all_da_obj())
       })
     }, autoDestroy = FALSE)
     
@@ -794,8 +845,12 @@ shinyServer(function(input, output, session) {
                     selected = colnames(normalized_data()$e_meta)[3])
       })
   
-      output$indsp_plot <- renderPlot({
+      indsp_plot_obj <<- reactive({
         pmartRseq::plot_indsp(indsp = indsp_res(), omicsData = normalized_data(), x_axis = input$indsp_xaxis, group = input$indsp_group)
+      })
+      output$indsp_plot <- renderPlot({
+        #pmartRseq::plot_indsp(indsp = indsp_res(), omicsData = normalized_data(), x_axis = input$indsp_xaxis, group = input$indsp_group)
+        print(indsp_plot_obj())
       })
     }, autoDestroy = FALSE)
     
@@ -879,15 +934,19 @@ shinyServer(function(input, output, session) {
                            selected = c("raw","filtered","normalized","diffabun"))
       })
       
-      # output$files_to_download <- renderUI({
-      #   checkboxGroupInput("files_to_download",
-      #                      label = "Select which datasets to download",
-      #                      choices = list("raw"="raw","filtered"="filtered","normalized"="normalized",
-      #                                     "alphadiv"="alphadiv","richness"="richness",
-      #                                     "diffabun"="diffabun","indicspec"="indicspec",
-      #                                     "combined"="combined"),
-      #                      selected = c("raw","filtered","normalized","diffabun"))
-      # })
+      output$files_to_download <- renderUI({
+        checkboxGroupInput("files_to_download",
+                           label = "Select which datasets to download",
+                           choices = list("raw"="raw","filtered"="filtered","groupings"="groupings",
+                                          "outliers"="outliers","normalized"="normalized",
+                                          "alphadiv"="alphadiv","richness"="richness","ordination"="ordination",
+                                          "diffabun"="diffabun","indicspec"="indicspec",
+                                          "combined"="combined"),
+                           selected = c("raw","filtered","groupings",
+                                        "outliers","normalized",
+                                        "alphadiv","richness","ordination",
+                                        "diffabun","indicspec","combined"))
+      })
       
       output$downloadData <- downloadHandler(
         filename = "mead_data_analysis.zip",
@@ -896,15 +955,85 @@ shinyServer(function(input, output, session) {
           setwd(tempdir())
           print(tempdir())
           
-          fs <- c("raw.csv","filtered.csv","normalized.csv","diffabun.csv")
-          write.csv(rRNAobj()$e_data, file="raw.csv")
-          write.csv(filtered_data()$e_data, file="filtered.csv")
-          write.csv(normalized_data()$e_data, file="normalized.csv")
-          write.csv(diffabun_res()$allResults, file="diffabun.csv")
-          ggsave(norm_plot_obj(), filename = "normalized.png", device="png")
+          fs <- vector()
+          rep <- vector()
+          if("raw" %in% input$files_to_download){
+            fs <- c(fs, "raw.csv")
+            rep <- c(rep, "raw")
+            write.csv(rRNAobj()$e_data, file="raw.csv")
+          }
+          if("filtered" %in% input$files_to_download){
+            fs <- c(fs, "filtered.csv")
+            rep <- c(rep, "filtered")
+            write.csv(filtered_data()$e_data, file="filtered.csv")
+          }
+          if("groupings" %in% input$files_to_download){
+            rep <- c(rep, "groupings")
+            fs <- c(fs, "groupings.csv")
+            write.csv(group_df_tab(), file="groupings.csv")
+          }
+          if("outliers" %in% input$files_to_download){
+            rep <- c(rep, "outliers")
+            fs <- c(fs, "outliers.png")
+            ggsave(jac_plot_obj(), filename="outliers.png", device="png")
+          }
+          if("normalized" %in% input$files_to_download){
+            rep <- c(rep, "normalized")
+            fs <- c(fs, "normalized.csv", "normalized.png", "abun_rich_raw.png", "abun_rich_norm.png")
+            write.csv(normalized_data()$e_data, file="normalized.csv")
+            ggsave(norm_plot_obj(), filename = "normalized.png", device="png")
+            ggsave(ra_raw_plot(), filename="abun_rich_raw.png", device="png")
+            ggsave(ra_norm_plot(), filename="abun_rich_norm.png", device="png")
+          }
+          if("alphadiv" %in% input$files_to_download){
+            fs <- c(fs, "alphadiv.csv", "alphadiv.png")
+            rep <- c(rep, "alphadiv")
+            write.csv(a_div(), file="alphadiv.csv")
+            ggsave(adiv_plot_obj(), filename="alphadiv.png", device="png")
+          }
+          if("richness" %in% input$files_to_download){
+            fs <- c(fs, "rich.csv", "rich.png")
+            rep <- c(rep, "rich")
+            write.csv(rich(), file="rich.csv")
+            ggsave(rich_plot_obj(), filename="rich.png", device="png")
+          }
+          if("ordination" %in% input$files_to_download){
+            #fs <- c(fs, "dimcheck.png", "ordplot.png")
+            fs <- c(fs, "ordplot.png")
+            rep <- c(rep, "ordination")
+            #ggsave(dimcheck_obj(), filename="dimcheck.png", device="png")
+            ggsave(ord_plot_obj(), filename="ordplot.png", device="png")
+          }
+          if("diffabun" %in% input$files_to_download){
+            fs <- c(fs, "diffabun.csv", "daflag.png", "dalogfc.png", "allda.png")
+            rep <- c(rep, "diffabun")
+            write.csv(diffabun_res()$allResults, file="diffabun.csv")
+            ggsave(da_flag_plot_obj(), filename="daflag.png", device="png")
+            ggsave(da_logfc_plot_obj(), filename="dalogfc.png", device="png")
+            ggsave(plot_all_da_obj()[[1]], filename="allda.png", device="png")
+          }
+          if("indicspec" %in% input$files_to_download){
+            fs <- c(fs, "indicspec.csv", "indsp.png")
+            rep <- c(rep, "indicspec")
+            write.csv(indsp_res(), file="indicspec.csv")
+            ggsave(indsp_plot_obj(), filename="indsp.png", device="png")
+          }
+          if("combined" %in% input$files_to_download){
+            fs <- c(fs, "combined.csv")
+            rep <- c(rep, "combined")
+            write.csv(taxares(), file="combined.csv")
+          }
+          
+          # fs <- c("raw.csv","filtered.csv","normalized.csv","diffabun.csv")
+          # write.csv(rRNAobj()$e_data, file="raw.csv")
+          # write.csv(filtered_data()$e_data, file="filtered.csv")
+          # write.csv(normalized_data()$e_data, file="normalized.csv")
+          # write.csv(diffabun_res()$allResults, file="diffabun.csv")
+          # ggsave(norm_plot_obj(), filename = "normalized.png", device="png")
           print(fs)
           
           zip(zipfile=fname, files=fs)
+          if(file.exists(paste0(fname,".zip"))){file.rename(paste0(fname,".zip"),fname)}
         },
         contentType = "application/zip"
       )
