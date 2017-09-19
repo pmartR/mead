@@ -966,12 +966,12 @@ shinyServer(function(input, output, session) {
           rep <- list()
           if("raw" %in% input$files_to_download){
             fs <- c(fs, "raw.csv")
-            rep <- rRNAobj()
+            rep$data <- rRNAobj()
             write.csv(rRNAobj()$e_data, file="raw.csv")
           }
           if("filtered" %in% input$files_to_download){
             fs <- c(fs, "filtered.csv")
-            rep <- filtered_data()
+            rep$data <- filtered_data()
             #rep <- c(rep, "filtered")
             write.csv(filtered_data()$e_data, file="filtered.csv")
           }
@@ -982,7 +982,7 @@ shinyServer(function(input, output, session) {
           }
           if("normalized" %in% input$files_to_download){
             #rep <- c(rep, "normalized")
-            rep <- normalized_data()
+            rep$data <- normalized_data()
             fs <- c(fs, "normalized.csv", "normalized.png", "abun_rich_raw.png", "abun_rich_norm.png")
             write.csv(normalized_data()$e_data, file="normalized.csv")
             ggsave(norm_plot_obj(), filename = "normalized.png", device="png")
@@ -991,21 +991,21 @@ shinyServer(function(input, output, session) {
           }
           if("outliers" %in% input$files_to_download){
             #rep <- c(rep, "outliers")
-            rep <- c(rep, outlier_jaccard())
+            rep$jaccard <- outlier_jaccard()
             fs <- c(fs, "outliers.png")
             ggsave(jac_plot_obj(), filename="outliers.png", device="png")
           }
           if("alphadiv" %in% input$files_to_download){
             fs <- c(fs, "alphadiv.csv", "alphadiv.png")
             #rep <- c(rep, "alphadiv")
-            rep <- c(rep, a_div())
+            rep$adiv <- a_div()
             write.csv(a_div(), file="alphadiv.csv")
             ggsave(adiv_plot_obj(), filename="alphadiv.png", device="png")
           }
           if("richness" %in% input$files_to_download){
             fs <- c(fs, "rich.csv", "rich.png")
             #rep <- c(rep, "rich")
-            rep <- c(rep, rich())
+            rep$rich <- rich()
             write.csv(rich(), file="rich.csv")
             ggsave(rich_plot_obj(), filename="rich.png", device="png")
           }
@@ -1019,7 +1019,7 @@ shinyServer(function(input, output, session) {
           if("diffabun" %in% input$files_to_download){
             fs <- c(fs, "diffabun.csv", "daflag.png", "dalogfc.png", "allda.png")
             #rep <- c(rep, "diffabun")
-            rep <- c(rep, diffabun_res())
+            rep$diffabun <- diffabun_res()
             write.csv(diffabun_res()$allResults, file="diffabun.csv")
             ggsave(da_flag_plot_obj(), filename="daflag.png", device="png")
             ggsave(da_logfc_plot_obj(), filename="dalogfc.png", device="png")
@@ -1028,13 +1028,13 @@ shinyServer(function(input, output, session) {
           if("indicspec" %in% input$files_to_download){
             fs <- c(fs, "indicspec.csv", "indsp.png")
             #rep <- c(rep, "indicspec")
-            rep <- c(rep, indsp_res())
+            rep$indsp <- indsp_res()
             write.csv(indsp_res(), file="indicspec.csv")
             ggsave(indsp_plot_obj(), filename="indsp.png", device="png")
           }
           if("combined" %in% input$files_to_download){
             fs <- c(fs, "combined.csv")
-            rep <- c(rep, "combined")
+            rep$combined <- taxares()
             write.csv(taxares(), file="combined.csv")
           }
           if("report" %in% input$files_to_download){
@@ -1045,7 +1045,9 @@ shinyServer(function(input, output, session) {
             #file.copy("seqData_Report.Rmd", tempReport, overwrite = TRUE)
             data <- rep
             classes <- unlist(lapply(data, class))
-            rmarkdown::render(tempReport, output_file="report.docx", envir = new.env(parent = globalenv()))
+            print(classes)
+            params <- list(data=data, classes=classes)
+            rmarkdown::render(tempReport, output_file="report.docx", params=params, envir = new.env(parent = globalenv()))
           }
           
           # fs <- c("raw.csv","filtered.csv","normalized.csv","diffabun.csv")
