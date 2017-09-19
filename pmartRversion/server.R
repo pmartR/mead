@@ -942,19 +942,25 @@ shinyServer(function(input, output, session) {
                                           "outliers"="outliers","normalized"="normalized",
                                           "alphadiv"="alphadiv","richness"="richness","ordination"="ordination",
                                           "diffabun"="diffabun","indicspec"="indicspec",
-                                          "combined"="combined"),#"REPORT"="report"),
+                                          "combined"="combined","REPORT"="report"),
                            selected = c("raw","filtered","groupings",
                                         "outliers","normalized",
                                         "alphadiv","richness","ordination",
-                                        "diffabun","indicspec","combined"))#,"report"))
+                                        "diffabun","indicspec","combined","report"))
       })
       
       output$downloadData <- downloadHandler(
         filename = "mead_data_analysis.zip",
         content = function(fname){
+          if("report" %in% input$files_to_download){
+            tempReport <- file.path(tempdir(), "seqData_Report.Rmd")
+            file.copy("seqData_Report.Rmd", tempReport, overwrite = TRUE)
+          }
           tmpdir <- tempdir()
           setwd(tempdir())
           print(tempdir())
+          
+
           
           fs <- vector()
           rep <- list()
@@ -1034,9 +1040,12 @@ shinyServer(function(input, output, session) {
           if("report" %in% input$files_to_download){
             fs <- c(fs, "report.docx")
             #pmartRseq::report(omicsData = rep, output_file = "report.docx")
+            #browser()
+            #tempReport <- file.path(tempdir(), "seqData_Report.Rmd")
+            #file.copy("seqData_Report.Rmd", tempReport, overwrite = TRUE)
             data <- rep
             classes <- unlist(lapply(data, class))
-            render("R/seqData_Report.Rmd", output_file="report.docx")
+            rmarkdown::render(tempReport, output_file="report.docx", envir = new.env(parent = globalenv()))
           }
           
           # fs <- c("raw.csv","filtered.csv","normalized.csv","diffabun.csv")
