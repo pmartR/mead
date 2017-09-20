@@ -78,11 +78,12 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
   fluidRow(
     actionButton("otu_reset_button", label = "Reset OTU Filter", icon = icon("trash")),
     actionButton("otu_filter_go", label = "Apply OTU Filter", icon = icon("bar-chart"))
-  ),
-  verbatimTextOutput("summ_filt")
+  )
   ),
   
   tabPanel("Group Designation",
+           verbatimTextOutput("summ_filt"),
+           verbatimTextOutput("nrow_edata"),
            h2("Groupings"),
            h3("Main Effects"),
            fluidRow(

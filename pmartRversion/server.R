@@ -301,13 +301,19 @@ shinyServer(function(input, output, session) {
     return(isolate(filtered_rRNA_obj))
   })
   
+
+  # ################ Group Designation Tab #################
+
   output$summ_filt <- renderPrint({
-    browser()
+    #browser()
     summary(filtered_data())
   })
   
-  # ################ Group Designation Tab #################
-
+  output$nrow_edata <- renderPrint({
+    nrow(filtered_data()$e_data)
+  })
+  
+  
   group_vars <- reactive({
     intersect(which(lapply(apply(filtered_data()$f_data, 2, function(z) table(z))[unlist(lapply(apply(filtered_data()$f_data, 2, function(x) table(x)), function(y) any(is.finite(y))))], function(w) max(w)) > 2), which(apply(filtered_data()$f_data, 2, function(v) length(unique(v))) > 2))
     
