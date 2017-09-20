@@ -302,6 +302,10 @@ shinyServer(function(input, output, session) {
     return(isolate(filtered_rRNA_obj))
   })
   
+  output$summ_filt <- renderPrint({
+    browser()
+    summary(filtered_data())
+  })
   
   # ################ Group Designation Tab #################
 
@@ -423,8 +427,14 @@ shinyServer(function(input, output, session) {
   # Look at normalized results
     output$normData <- DT::renderDataTable(normalized_data()$e_data, rownames = FALSE)
 
+    output$norm_class <- renderUI({
+      selectInput("norm_class",
+                                     label = "Taxonomic level to plot",
+                                     choices = colnames(normalized_data()$e_meta)[-which(colnames(normalized_data()$e_meta)==attr(normalized_data(),"cnames")$edata_cname)])
+    })
+    
     norm_plot_obj <- reactive({
-      plot(normalized_data(), class="Phylum")
+      plot(normalized_data(), class=input$norm_class)
     })
   # Try to make a stacked bar plot - not working right now
     output$norm_plot <- renderPlot({
@@ -516,6 +526,10 @@ shinyServer(function(input, output, session) {
       #plot(a_div(), x_axis=input$xaxis, color=input$color)
       print(adiv_plot_obj())
     })
+    
+    output$adiv_summary <- renderPrint({
+      summary(a_div())
+    })
 
                
   #----------- richness example ----------#
@@ -544,6 +558,10 @@ shinyServer(function(input, output, session) {
     output$rich_plot <- renderPlot({
       #plot(rich(), x_axis=input$xaxis, color=input$color)
       print(rich_plot_obj())
+    })
+    
+    output$rich_summary <- renderPrint({
+      summary(rich())
     })
   
     
@@ -775,6 +793,10 @@ shinyServer(function(input, output, session) {
     # Look at the results - this is hard to look at, maybe remove?
       output$da_res <- DT::renderDataTable(diffabun_res()$allResults)
       
+      output$da_summary <- renderPrint({
+        summary(diffabun_res())
+      })
+      
       da_flag_plot_obj <<- reactive({
         plot(diffabun_res(), type = "flag")
       })
@@ -831,6 +853,10 @@ shinyServer(function(input, output, session) {
       })
   
       output$indsp_results <- DT::renderDataTable(indsp_res())
+      
+      output$indsp_summary <- renderPrint({
+        summary(indsp_res())
+      })
   
   
       output$indsp_xaxis <- renderUI({
@@ -973,16 +999,13 @@ shinyServer(function(input, output, session) {
           if("filtered" %in% input$files_to_download){
             fs <- c(fs, "filtered.csv")
             rep$data <- filtered_data()
-            #rep <- c(rep, "filtered")
             write.csv(filtered_data()$e_data, file="filtered.csv")
           }
           if("groupings" %in% input$files_to_download){
-            #rep <- c(rep, "groupings")
             fs <- c(fs, "groupings.csv")
             write.csv(group_df_tab(), file="groupings.csv")
           }
           if("normalized" %in% input$files_to_download){
-            #rep <- c(rep, "normalized")
             rep$data <- normalized_data()
             fs <- c(fs, "normalized.csv", "normalized.png", "abun_rich_raw.png", "abun_rich_norm.png")
             write.csv(normalized_data()$e_data, file="normalized.csv")
@@ -991,35 +1014,29 @@ shinyServer(function(input, output, session) {
             ggsave(ra_norm_plot(), filename="abun_rich_norm.png", device="png")
           }
           if("outliers" %in% input$files_to_download){
-            #rep <- c(rep, "outliers")
             rep$jaccard <- outlier_jaccard()
             fs <- c(fs, "outliers.png")
             ggsave(jac_plot_obj(), filename="outliers.png", device="png")
           }
           if("alphadiv" %in% input$files_to_download){
             fs <- c(fs, "alphadiv.csv", "alphadiv.png")
-            #rep <- c(rep, "alphadiv")
             rep$adiv <- a_div()
             write.csv(a_div(), file="alphadiv.csv")
             ggsave(adiv_plot_obj(), filename="alphadiv.png", device="png")
           }
           if("richness" %in% input$files_to_download){
             fs <- c(fs, "rich.csv", "rich.png")
-            #rep <- c(rep, "rich")
             rep$rich <- rich()
             write.csv(rich(), file="rich.csv")
             ggsave(rich_plot_obj(), filename="rich.png", device="png")
           }
           if("ordination" %in% input$files_to_download){
-            #fs <- c(fs, "dimcheck.png", "ordplot.png")
             fs <- c(fs, "ordplot.png")
-            #rep <- c(rep, "ordination")
             #ggsave(dimcheck_obj(), filename="dimcheck.png", device="png")
             ggsave(ord_plot_obj(), filename="ordplot.png", device="png")
           }
           if("diffabun" %in% input$files_to_download){
             fs <- c(fs, "diffabun.csv", "daflag.png", "dalogfc.png", "allda.png")
-            #rep <- c(rep, "diffabun")
             rep$diffabun <- diffabun_res()
             write.csv(diffabun_res()$allResults, file="diffabun.csv")
             ggsave(da_flag_plot_obj(), filename="daflag.png", device="png")
@@ -1028,7 +1045,6 @@ shinyServer(function(input, output, session) {
           }
           if("indicspec" %in% input$files_to_download){
             fs <- c(fs, "indicspec.csv", "indsp.png")
-            #rep <- c(rep, "indicspec")
             rep$indsp <- indsp_res()
             write.csv(indsp_res(), file="indicspec.csv")
             ggsave(indsp_plot_obj(), filename="indsp.png", device="png")
@@ -1040,10 +1056,6 @@ shinyServer(function(input, output, session) {
           }
           if("report" %in% input$files_to_download){
             fs <- c(fs, "report.docx")
-            #pmartRseq::report(omicsData = rep, output_file = "report.docx")
-            #browser()
-            #tempReport <- file.path(tempdir(), "seqData_Report.Rmd")
-            #file.copy("seqData_Report.Rmd", tempReport, overwrite = TRUE)
             data <- rep
             classes <- unlist(lapply(data, class))
             print(classes)
@@ -1051,12 +1063,6 @@ shinyServer(function(input, output, session) {
             rmarkdown::render(tempReport, output_file="report.docx", params=params, envir = new.env(parent = globalenv()))
           }
           
-          # fs <- c("raw.csv","filtered.csv","normalized.csv","diffabun.csv")
-          # write.csv(rRNAobj()$e_data, file="raw.csv")
-          # write.csv(filtered_data()$e_data, file="filtered.csv")
-          # write.csv(normalized_data()$e_data, file="normalized.csv")
-          # write.csv(diffabun_res()$allResults, file="diffabun.csv")
-          # ggsave(norm_plot_obj(), filename = "normalized.png", device="png")
           print(fs)
           
           zip(zipfile=fname, files=fs)

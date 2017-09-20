@@ -78,7 +78,8 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
   fluidRow(
     actionButton("otu_reset_button", label = "Reset OTU Filter", icon = icon("trash")),
     actionButton("otu_filter_go", label = "Apply OTU Filter", icon = icon("bar-chart"))
-  )
+  ),
+  verbatimTextOutput("summ_filt")
   ),
   
   tabPanel("Group Designation",
@@ -129,6 +130,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
                          plotOutput("ra_raw"),
                          plotOutput("ra_norm"))
            ),
+           uiOutput("norm_class"),
            plotOutput("norm_plot")
   ),
   
@@ -139,10 +141,12 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
            h3("Alpha Diversity"),
            uiOutput("adiv_index"),
            plotOutput("adiv_plot"),
+           verbatimTextOutput("adiv_summary"),
            br(),
            h3("Richness"),
            uiOutput("rich_index"),
-           plotOutput("rich_plot")),
+           plotOutput("rich_plot"),
+           verbatimTextOutput("rich_summary")),
  
   tabPanel("Ordination",
            h3("Parameters"),
@@ -181,6 +185,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
             label = "Submit"
               ),
           DT::dataTableOutput("da_res"),
+          verbatimTextOutput("da_summary"),
           plotOutput("flag_plot"),
           plotOutput("logfc_plot"),
           plotOutput("plot_all_da")),
@@ -194,6 +199,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
             label = "Submit"
           ),
           DT::dataTableOutput("indsp_results"),
+          verbatimTextOutput("indsp_summary"),
           uiOutput("indsp_xaxis"),
           uiOutput("indsp_group"),
           plotOutput("indsp_plot")),
