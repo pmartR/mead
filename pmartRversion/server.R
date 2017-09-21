@@ -84,13 +84,13 @@ shinyServer(function(input, output, session) {
     if (input$sample_filter_go != 0) {
       # apply sample filter
        #browser()
-      #isolate({
+      isolate({
       filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$sample[[input$sample_filter_go]],
                                                  omicsData = filt1,
                                                  upper_lim = input$n)
       filt1 <- filtered_rRNA_obj
       # return(filtered_rRNA_obj)
-      # })
+       })
     }
     
     # no sample metadata filter yet
@@ -135,7 +135,7 @@ shinyServer(function(input, output, session) {
         # return(filtered_rRNA_obj)
       })
     }
-  })
+  }, priority = 10)
   
   #----------------- observe resets ----------#
   observeEvent(input$otu_reset_button, {
@@ -368,6 +368,11 @@ shinyServer(function(input, output, session) {
   
   filtered_data <- reactive({
     input$metadata_filter_go
+    input$metadata_reset_button
+    input$sample_filter_go
+    input$sample_reset_button
+    input$otu_filter_go
+    input$otu_reset_button
     # observe({
     #   filtered_rRNA_obj
     ################# JSON object for Meg #################
@@ -382,6 +387,7 @@ shinyServer(function(input, output, session) {
   
   output$summ_filt <- renderPrint({
     #browser()
+    
     validate(
       need(!(is.null(metadata_obj())), message = "please import sample metadata")
     )
