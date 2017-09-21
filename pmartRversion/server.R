@@ -382,6 +382,12 @@ shinyServer(function(input, output, session) {
   
   output$summ_filt <- renderPrint({
     #browser()
+    validate(
+      need(!(is.null(metadata_obj())), message = "please import sample metadata")
+    )
+    validate(
+      need(!(is.null(filtered_data())) , message = "Upload data first")
+    )
     summary(filtered_data())
   })
   
