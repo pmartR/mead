@@ -69,8 +69,8 @@ shinyServer(function(input, output, session) {
     if (input$otu_filter_go != 0) {
       # apply k over a filter
       isolate({
-        filt1 <- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
-                                      omicsData = rRNAobj(),
+        filt1 <<- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
+                                      omicsData = filt1,
                                       num_samps = input$filter_kOverA_sample_threshold,
                                       upper_lim = input$filter_kOverA_count_threshold)  
       })
@@ -203,6 +203,10 @@ shinyServer(function(input, output, session) {
     )
     input$metadata_filter_go
     input$metadata_reset_button
+    input$sample_filter_go
+    input$sample_reset_button
+    input$otu_filter_go
+    input$otu_reset_button
     if (is.null(input$qiime)) {
       return(NULL)
     }else{
