@@ -79,6 +79,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
     actionButton("otu_reset_button", label = "Reset OTU Filter", icon = icon("trash")),
     actionButton("otu_filter_go", label = "Apply OTU Filter", icon = icon("bar-chart"))
   ),
+  br(),
   verbatimTextOutput("summ_filt")
   ),
   

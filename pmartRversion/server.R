@@ -37,7 +37,7 @@ shinyServer(function(input, output, session) {
     validate(
       need(input$qiime != "", "Please select a qiime file")
     )
-    return(pmartRseq::as.seqData(e_data = as.character(input$biom$datapath), f_data = as.character(input$qiime$datapath), edata_cname = "OTU", data_type = 'rRNA'))
+    return(pmartRseq::as.seqData(e_data = as.character(input$biom$datapath), f_data = as.character(input$qiime$datapath), edata_cname = "OTU", data_type = "rRNA", taxa_cname = "taxonomy2"))
   }) #end rRNAobj
   
   #-------- filter history support -----------#
