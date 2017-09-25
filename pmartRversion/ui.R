@@ -29,25 +29,21 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
             )
           ),
   h3("Full Metadata"),
-  tags$table(
-    DT::dataTableOutput("sample_metadata"),
-    tags$head(
-      tags$title(h4("Uploaded Metadata View"))
-    )),
-  # tags$table(
-  #   DT::dataTableOutput("new_samples"),
-  #   tags$head(
-  #     tags$title(h4("Uploaded Metadata View"))
-  #   )),
+  fluidRow(
+    column(width = 12, tags$table(
+      DT::dataTableOutput("sample_metadata"),
+      tags$head(
+        tags$title(h4("Uploaded Metadata View"))
+      )))
+  ),
+
   h3("Sample Filtering"),
   h4("Keep samples with specific metadata"),
-  # uiOutput("plots"),
   br(),
   fluidRow(
-    column(width = 6, uiOutput("boxes")),
+    column(width = 5,  uiOutput("boxes")),
     column(width = 6, uiOutput("plots"))
     ),
-  #uiOutput("boxes"),
   fluidRow(
     actionButton("metadata_reset_button", label = "Reset Meta Filter", icon = icon("trash")),
     actionButton("metadata_filter_go", label = "Apply Meta Filter", icon = icon("bar-chart"))
