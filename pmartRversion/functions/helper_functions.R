@@ -42,7 +42,7 @@ get_checkbox_output_list <- function(meta_data) {
     #paste the column num 
     boxname = names(categorical)[i]
     labelname <- names(categorical)[i]
-    box_output_object <- checkboxGroupInput(inputId = boxname, label = labelname, choices = unique(categorical[,i]), selected = unique(categorical[,i]))
+    box_output_object <- checkboxGroupInput(inputId = boxname, label = labelname, choices = unique(categorical[,i]), selected = unique(categorical[,i]), inline = TRUE)
   })
   #browser()
   do.call(tagList, categorical_list)
