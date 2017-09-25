@@ -60,82 +60,53 @@ shinyServer(function(input, output, session) {
   
   #--------- filter application observer ---------#
   filtered_rRNA_obj <- NULL
-  observe({
-    
-    # no kovera filter yet
-    if (input$otu_filter_go == 0) {
-      filt1 <- rRNAobj()
-    } 
-    if (input$otu_filter_go != 0) {
-      # apply k over a filter
-      isolate({
-        filt1 <<- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
-                                      omicsData = filt1,
-                                      num_samps = input$filter_kOverA_sample_threshold,
-                                      upper_lim = input$filter_kOverA_count_threshold)  
-      })
-    }
-    
-    # no sample filter yet
-    if (input$sample_filter_go == 0) {
-      filtered_rRNA_obj <<- filt1
-      #return(filtered_rRNA_obj)
-    } 
-    if (input$sample_filter_go != 0) {
-      # apply sample filter
-       #browser()
-      isolate({
-      filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$sample[[input$sample_filter_go]],
-                                                 omicsData = filt1,
-                                                 upper_lim = input$n)
-      filt1 <- filtered_rRNA_obj
-      # return(filtered_rRNA_obj)
-       })
-    }
-    
-    # no sample metadata filter yet
-    if (input$metadata_filter_go == 0) {
-      filtered_rRNA_obj <<- filt1
-      # return(filtered_rRNA_obj)
-    } 
-    
-    if (input$metadata_filter_go != 0) {
-      
-      # apply a metadata filter
-      isolate({
-        # get the intersection of the samples left after checkbox groups are removed
-        temp <- filtered_rRNA_obj$f_data
-        column_class <- sapply(temp, class)
-        categorical <- temp[, which(column_class %in% c("character", "factor", "logical"))]
-        # If categorical check for non-uniqueness
-        non_unique_columns <- which(unlist(lapply(categorical, function(x) length(unique(x)) != nrow(categorical) & length(unique(x)) != 1)))
-        if(length(non_unique_columns > 0)){
-          check_boxes <- names(categorical)[non_unique_columns]
-        } else {
-          check_boxes <- names(categorical)
-        }
-        sample_names <- list()
-        for (i in 1:length(check_boxes)) {
-          # build in a check for no samples to remove
-          # if (length(check_boxes[i]) == 0){
-          #   return(filtered_rRNA_obj)
-          # }
-          sample_names[[i]] <- dplyr::filter_(temp, interp(~v%in%input[[check_boxes[i]]], v=as.name(check_boxes[i]))) %>%
-            dplyr::select_(attr(filtered_rRNA_obj, "cnames")$fdata_cname)#find the column name and associated check box
-        }
-        sample_names <- Reduce(intersect, sample_names)
-        to_remove <- temp[ which(!(as.character(temp[, attr(filtered_rRNA_obj, "cnames")$fdata_cname]) %in% as.character(unlist(sample_names)))),
-                           attr(filtered_rRNA_obj, "cnames")$fdata_cname]
-        
-        
-        filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$metadata[[input$metadata_filter_go]],
-                                                   omicsData = filt1,
-                                                   samps_to_remove = to_remove)
-        
-        # return(filtered_rRNA_obj)
-      })
-    }
+  #filt1 <- NULL
+  observeEvent(rRNAobj(), {
+      filtered_rRNA_obj <<- rRNAobj()
   }, priority = 10)
+  
+  #--------- apply filter applications on click ---------#
+  observeEvent(input$otu_filter_go, {
+    filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
+                                   omicsData = filtered_rRNA_obj,
+                                   num_samps = input$filter_kOverA_sample_threshold,
+                                   upper_lim = input$filter_kOverA_count_threshold)  
+  })
+  observeEvent(input$sample_filter_go, {
+    filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$sample[[input$sample_filter_go]],
+                                               omicsData = filtered_rRNA_obj,
+                                               upper_lim = input$n)
+  })
+  observeEvent(input$metadata_filter_go, {
+    # get the intersection of the samples left after checkbox groups are removed
+    temp <- filtered_rRNA_obj$f_data
+    column_class <- sapply(temp, class)
+    categorical <- temp[, which(column_class %in% c("character", "factor", "logical"))]
+    # If categorical check for non-uniqueness
+    non_unique_columns <- which(unlist(lapply(categorical, function(x) length(unique(x)) != nrow(categorical) & length(unique(x)) != 1)))
+    if(length(non_unique_columns > 0)){
+      check_boxes <- names(categorical)[non_unique_columns]
+    } else {
+      check_boxes <- names(categorical)
+    }
+    sample_names <- list()
+    for (i in 1:length(check_boxes)) {
+      # build in a check for no samples to remove
+      # if (length(check_boxes[i]) == 0){
+      #   return(filtered_rRNA_obj)
+      # }
+      sample_names[[i]] <- dplyr::filter_(temp, interp(~v%in%input[[check_boxes[i]]], v=as.name(check_boxes[i]))) %>%
+        dplyr::select_(attr(filtered_rRNA_obj, "cnames")$fdata_cname)#find the column name and associated check box
+    }
+    sample_names <- Reduce(intersect, sample_names)
+    to_remove <- temp[ which(!(as.character(temp[, attr(filtered_rRNA_obj, "cnames")$fdata_cname]) %in% as.character(unlist(sample_names)))),
+                       attr(filtered_rRNA_obj, "cnames")$fdata_cname]
+    filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$metadata[[input$metadata_filter_go]],
+                                               omicsData = filtered_rRNA_obj,
+                                               samps_to_remove = to_remove)
+    
+    
+  })
   
   #----------------- observe resets ----------#
   observeEvent(input$otu_reset_button, {
