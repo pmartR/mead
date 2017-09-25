@@ -10,11 +10,6 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
 
  tabPanel("Data and Filtering", 
           tags$head(
-            # tags$style(HTML("
-            #                  .shiny-output-error-validation {
-            #                  color: #D8000C;
-            #                  }
-            #                  "))
           ),
           
           fluidRow(
@@ -22,9 +17,9 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
                    tags$hr(),
                    h3("Load Data"),
                    fluidRow(
-                     column(width = 4, fileInput('biom', 'Choose BIOM File')),
-                     column(width = 4, fileInput('fasta', 'Choose FASTA file')),
-                     column(width = 4, fileInput('qiime', 'Choose Sample Metadata QIIME'))
+                     column(width = 6, fileInput('biom', 'Choose BIOM File')),
+                     # column(width = 4, fileInput('fasta', 'Choose FASTA file')),
+                     column(width = 6, fileInput('qiime', 'Choose Sample Metadata QIIME'))
                    )
             )
           ),
