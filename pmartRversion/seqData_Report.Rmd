@@ -18,7 +18,7 @@ knit_engines$set(asis = function(options) {
 })
 ```
 
-```{r}
+```{r format data}
 # Check for various data objects
 
 # classes <- lapply(data, class)
@@ -51,7 +51,7 @@ if(length(grep("seqData", classes)) == 0){
 
 # Summary of data
 
-```{r}
+```{r data summary}
 norm_data <- data$data
 ```
 
@@ -59,210 +59,201 @@ This `r attr(norm_data, "data_info")$data_type` data had `r attr(norm_data, "dat
 
 There were `r length(unique(attr(norm_data,"group_DF")$Group))` groupings of these samples. The samples were spread among the groups as follows.
 
-```{r, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE, comment=""}
+```{r groups, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE, comment=""}
 table(attr(norm_data,"group_DF")$Group)
 ```
 
-```{asis, echo=ifelse(is.null(attr(norm_data,"data_info")$norm_method),FALSE,TRUE)}
+```{asis normalization, echo=ifelse(is.null(attr(norm_data,"data_info")$norm_method),FALSE,TRUE)}
 ## Normalization
 
 The data was normalized using the `r attr(norm_data, "data_info")$norm_method` method.
 ```
 
-```{asis, echo=ifelse(is.null(attr(norm_data, "filters")), FALSE, TRUE)}
+```{asis filter header, echo=ifelse(is.null(attr(norm_data, "filters")), FALSE, TRUE)}
 ## Filters
 ```
 
-```{r, eval=ifelse(is.null(attr(norm_data, "filters")), FALSE, TRUE)}
+```{r filter text, eval=ifelse(is.null(attr(norm_data, "filters")), FALSE, TRUE)}
 unname(unlist(lapply(1:length(names(attr(norm_data, "filters"))), function(x) attr(norm_data, "filters")[[x]][1])))
 ```
 
 Finally, data was distributed as follows.
 
-```{r}
+```{r norm plot}
 plot(norm_data)
 ```
 
-```{r}
+```{r any community metrics}
 community <- any(c(!is.null(data$rich), !is.null(data$abun), !is.null(data$adiv), !is.null(data$even), !is.null(data$jaccard)))
 ```
 
-```{asis, echo=ifelse(community, TRUE, FALSE)}
+```{asis community metrics header, echo=ifelse(community, TRUE, FALSE)}
 # Community Metrics
 
 The following is information about community metrics that were run on the data.
 
 ```
 
-```{asis, echo=ifelse(!is.null(data$rich), TRUE, FALSE)}
+```{asis richness header, echo=ifelse(!is.null(data$rich), TRUE, FALSE)}
 ## Richness
 
 Richness is the number of unique reads seen in a sample. This can be in the form of the observed number of reads or in the form of a richness estimator (Chao1 or ACE), which estimates the total number of species present in a community.
 
 ```
 
-```{r, eval=ifelse(!is.null(data$rich), TRUE, FALSE)}
+```{r richness, eval=ifelse(!is.null(data$rich), TRUE, FALSE)}
 summary(data$rich)
 
 plot(data$rich)
 ```
 
-```{asis, echo=ifelse(!is.null(data$abun), TRUE, FALSE)}
+```{asis abundance header, echo=ifelse(!is.null(data$abun), TRUE, FALSE)}
 ## Abundance
 
 Abundance is the total number of reads seen in a sample. This can vary drastically among samples for a variety of reasons, including ecological as well as technical variability. Normalization techniques attempt to lessen the differences between samples.
 
 ```
 
-```{r, eval=ifelse(!is.null(data$abun), TRUE, FALSE)}
+```{r abundance, eval=ifelse(!is.null(data$abun), TRUE, FALSE)}
 summary(data$abun)
 
 plot(data$abun)
 ```
 
-```{asis, echo=ifelse(!is.null(data$rich) & !is.null(data$abun), TRUE, FALSE)}
+```{asis rich vs abun header, echo=ifelse(!is.null(data$rich) & !is.null(data$abun), TRUE, FALSE)}
 ## Richness vs Abundance
 
 A plot showing richness versus abundance can help determine how well a normalization strategy worked. Normalization should decrease the correlation between richness and abundance.
 
 ```
 
-```{r, eval=ifelse(!is.null(data$rich) & !is.null(data$abun), TRUE, FALSE)}
+```{r rich vs abun, eval=ifelse(!is.null(data$rich) & !is.null(data$abun), TRUE, FALSE)}
 plot(data$rich, data$abun)
 ```
 
-```{asis, echo=ifelse(!is.null(data$adiv), TRUE, FALSE)}
+```{asis alpha diversity header, echo=ifelse(!is.null(data$adiv), TRUE, FALSE)}
 ## Alpha Diversity
 
 Alpha diversity is a measure of how diverse a sample is.
 
 ```
 
-```{r, eval=ifelse(!is.null(data$adiv), TRUE, FALSE)}
+```{r alpha diversity, eval=ifelse(!is.null(data$adiv), TRUE, FALSE)}
 summary(data$adiv)
 
 plot(data$adiv)
 ```
 
-```{asis, echo=ifelse(!is.null(data$even), TRUE, FALSE)}
+```{asis evenness header, echo=ifelse(!is.null(data$even), TRUE, FALSE)}
 ## Evenness
 
 Evenness is a measure of the spread of reads in a sample. For instance, a sample with reads of equal abundance will have a high evenness value, whereas a sample where there is a large variance in the abundance of reads will have a lower evenness.
 
 ```
 
-```{r, eval=ifelse(!is.null(data$even), TRUE, FALSE)}
+```{r evenness, eval=ifelse(!is.null(data$even), TRUE, FALSE)}
 summary(data$even)
 
 plot(data$even)
 ```
 
-```{asis, echo=ifelse(!is.null(data$jaccard), TRUE, FALSE)}
+```{asis jaccard header, echo=ifelse(!is.null(data$jaccard), TRUE, FALSE)}
 ## Jaccard `r ifelse(attributes(data$jaccard)$similarity, "Similarity", "Dissimilarity")`
 
 The Jaccard index is a binary beta diversity measure. Here, it is implemented to look at the `r ifelse(attributes(data$jaccard)$similarity, "similarity", "dissimilarity")` between samples in the same group.
 
 ```
 
-```{r, eval=ifelse(!is.null(data$jaccard), TRUE, FALSE)}
+```{r jaccard, eval=ifelse(!is.null(data$jaccard), TRUE, FALSE)}
 summary(data$jaccard)
 
 plot(data$jaccard)
 ```
 
-```{asis, echo=ifelse(!is.null(data$effsp), TRUE, FALSE)}
+```{asis effective species header, echo=ifelse(!is.null(data$effsp), TRUE, FALSE)}
 ## Effective Species
 
 ```
 
-```{r, eval=ifelse(!is.null(data$effsp), TRUE, FALSE)}
+```{r effective species, eval=ifelse(!is.null(data$effsp), TRUE, FALSE)}
 summary(data$effsp)
 
 plot(data$effsp)
 ```
 
-```{asis, echo=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
+```{asis differential abundance header, echo=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
 # Differential Abundance
 
 Differential abundance analysis performs statistical pairwise comparisons to determine which reads are statistically different between the groups. This results in a p-value and log-fold-change for every read in the two groups.
 
 ```
 
-```{r, eval=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
+```{r diffabun test text, eval=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
 diffexp_data <- data$diffabun
 
 attr(diffexp_data,"Tests")$Text
 ```
 
-```{r, eval=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
+```{r diffabun summary, eval=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
 summary(diffexp_data)
 ```
 
-```{asis, echo=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
+```{asis diffabun flag text, echo=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
 The number and regulatory direction of significantly differentially abundant reads (using a p-value threshold of `r attr(results,"Threshold")` for each comparison and each test performed can be seen in the following plots. 
 
 ```
 
-```{r, eval=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
+```{r diffabun flag, eval=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
 plot(diffexp_data, type="flag")
 ```
 
-```{asis, echo=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
+```{asis diffabun volcano text, echo=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
 The fold changes are plotted against the p-values in the following volcano plots.
 
 ```
 
-```{r, eval=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
+```{r diffabun volcano, eval=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
 plot(diffexp_data, type="volcano")
 ```
 
-```{asis, echo=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
+```{asis diffabun logfc text, echo=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
 The fold changes for significant features are plotted in the following heatmaps.
 
 ```
 
-```{r, eval=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
+```{r diffabun logfc, eval=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
 plot(diffexp_data, type="logfc")
 ```
 
-```{asis, echo=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
-The significant features can be seen in the following plots.
-
-```
-
-```{r, eval=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
-plot_significant(diffexp_data, norm_data)
-```
-
-```{asis, echo=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
+```{asis diffabun all diffabun text, echo=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
 The taxonomic distribution of the significantly differentially abundant features can be seen in the following plot(s).
 
 ```
 
-```{r, eval=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
+```{r diffabun all diffabun, eval=ifelse(!is.null(data$diffabun), TRUE, FALSE)}
 plot_all_diffabun(diffexp_data, norm_data)
 ```
 
-```{asis, echo=ifelse(!is.null(data$indsp), TRUE, FALSE)}
+```{asis indicator species text, echo=ifelse(!is.null(data$indsp), TRUE, FALSE)}
 # Indicator Species
 
 Indicator species are species which are characteristic of a group.
 
 ```
 
-```{r, eval=ifelse(!is.null(data$indsp), TRUE, FALSE)}
+```{r indicator species summary and flag, eval=ifelse(!is.null(data$indsp), TRUE, FALSE)}
 summary(data$indsp)
 
 plot(data$indsp, type="flag")
 ```
 
-```{asis, echo=ifelse(!is.null(data$combined), TRUE, FALSE)}
+```{asis combined header, echo=ifelse(!is.null(data$combined), TRUE, FALSE)}
 # Combined
 
 These are the features that were found significant in both the differential abundance tests and the indicator species analysis.
 
 ```
 
-```{r, eval=ifelse(!is.null(data$combined), TRUE, FALSE)}
+```{r combined, eval=ifelse(!is.null(data$combined), TRUE, FALSE)}
 data$combined
 ```
