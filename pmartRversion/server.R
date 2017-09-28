@@ -37,7 +37,10 @@ shinyServer(function(input, output, session) {
     validate(
       need(input$qiime != "", "Please select a qiime file")
     )
-    return(pmartRseq::as.seqData(e_data = as.character(input$biom$datapath), f_data = as.character(input$qiime$datapath), edata_cname = "OTU", data_type = "rRNA", taxa_cname = "taxonomy2"))
+    return_obj <- pmartRseq::as.seqData(e_data = as.character(input$biom$datapath), f_data = as.character(input$qiime$datapath), edata_cname = "OTU", data_type = "rRNA", taxa_cname = "taxonomy2")
+    #----check for unhallowed characters in column names----#
+    names(return_obj$f_data) <- make.names(names(return_obj$f_data))
+    return(return_obj)
   }) #end rRNAobj
   
   #-------- filter history support -----------#

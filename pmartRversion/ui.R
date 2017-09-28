@@ -11,9 +11,9 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
  tabPanel("Data and Filtering", 
           tags$head(
           ),
-          
+
           fluidRow(
-            column(width = 12, 
+            column(width = 12,
                    tags$hr(),
                    h3("Load Data"),
                    fluidRow(
@@ -23,6 +23,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
                    )
             )
           ),
+          #actionButton("Upload", "Upload ze data!"),
   h3("Full Metadata"),
   fluidRow(
     column(width = 12, tags$table(
