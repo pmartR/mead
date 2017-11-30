@@ -24,7 +24,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
             )
           ),
           #actionButton("Upload", "Upload ze data!"),
-  h3("Full Metadata"),
+  h3("Metadata View"),
   fluidRow(
     column(width = 12, tags$table(
       DT::dataTableOutput("sample_metadata"),
@@ -32,9 +32,10 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
         tags$title(h4("Uploaded Metadata View"))
       )))
   ),
-
-  h3("Sample Filtering"),
-  h4("Keep samples with specific metadata"),
+  hr(),
+  h3("Filtering"),
+  h4("Sample Metadata"),
+  p("Filter samples on numeric ranges or groupable characteristics"),
   br(),
   fluidRow(
     column(width = 5,  uiOutput("boxes")),
@@ -45,35 +46,46 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
     actionButton("metadata_filter_go", label = "Apply Meta Filter", icon = icon("bar-chart"))
   ),
   br(),
-  h4("Keep samples above a minimum number of reads"),
-  fluidRow(
-    column(width = 5, h5("Keep samples with at least")),
-    column(width = 2, numericInput(inputId = "n", label = "", value = 0, min = 0, width = 150)),
-    column(width = 2, h5("reads"))
-  ),
-  plotOutput("sample_counts_plot"),
-  fluidRow(
-    actionButton("sample_reset_button", label = "Reset Sample Filter", icon = icon("trash")),
-    actionButton("sample_filter_go", label = "Apply Sample Filter", icon = icon("bar-chart"))
-  ),
   hr(),
-  h3("OTU Filtering"),
   fluidRow(
-    column(width = 3, h5("Keep OTUs with more than"), align = 'center'),
-    column(width = 2,  numericInputRow("filter_kOverA_count_threshold", "",
-                                       value = kovera_A, min = 0, step = 1)),
-    column(width = 3, h5("counts in at least")),
-    column(width = 2, uiOutput("filter_ui_kOverA_k")),
-    column(width = 2, h5("samples"))
+    column(width = 4, 
+           h4("Sample Reads"),
+           p("Keep samples above a minimum number of reads"),
+           fluidRow(
+             column(width = 5, h5("Keep samples with at least")),
+             column(width = 2, numericInput(inputId = "n", label = "", value = 0, min = 0, width = 150)),
+             column(width = 2, h5("reads"))
+           ),
+           plotOutput("sample_counts_plot"),
+           fluidRow(
+             actionButton("sample_reset_button", label = "Reset Sample Filter", icon = icon("trash")),
+             actionButton("sample_filter_go", label = "Apply Sample Filter", icon = icon("bar-chart"))
+           )
+           ),
+    column(width = 4,
+           verbatimTextOutput("summ_filt")
+    ),
+    column(width = 4, 
+           h4("OTU Counts Per Sample"),
+           p("Keep OTUs with a minimum number of counts per sample"),
+           fluidRow(
+             column(width = 3, h5("Keep OTUs with more than"), align = 'center'),
+             column(width = 2,  numericInputRow("filter_kOverA_count_threshold", "",
+                                                value = kovera_A, min = 0, step = 1)),
+             column(width = 3, h5("counts in at least")),
+             column(width = 2, uiOutput("filter_ui_kOverA_k")),
+             column(width = 2, h5("samples"))
+           ),
+           br(),
+           plotOutput("read_counts_plot"),
+           fluidRow(
+             actionButton("otu_reset_button", label = "Reset OTU Filter", icon = icon("trash")),
+             actionButton("otu_filter_go", label = "Apply OTU Filter", icon = icon("bar-chart"))
+           )
+           )
+           )
   ),
-  plotOutput("read_counts_plot"),
-  fluidRow(
-    actionButton("otu_reset_button", label = "Reset OTU Filter", icon = icon("trash")),
-    actionButton("otu_filter_go", label = "Apply OTU Filter", icon = icon("bar-chart"))
-  ),
-  br(),
-  verbatimTextOutput("summ_filt")
-  ),
+
   
   tabPanel("Group Designation",
            #verbatimTextOutput("summ_filt"),
