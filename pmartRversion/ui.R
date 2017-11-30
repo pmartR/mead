@@ -1,8 +1,12 @@
 kovera_k <- 0
 kovera_A <- 0
 source("./functions/helper_functions.R")
-
+# create a reset session button using a js method
+jsResetCode <- "shinyjs.reset = function() {history.go(0)}"
 shinyUI(navbarPage(title = (windowTitle = "mead"),
+
+
+
 
   
  # titlePanel(div(img(src = "Honey_Jar.png", height = 33, width = 22), "mead")),
@@ -10,6 +14,13 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
 
  tabPanel("Data and Filtering", 
           tags$head(
+          ),
+          fluidRow(column(width=12,
+                          useShinyjs(),                                           
+                          extendShinyjs(text = jsResetCode),                     
+                          actionButton("reset_button", "Reset All") 
+                          )
+            
           ),
 
           fluidRow(

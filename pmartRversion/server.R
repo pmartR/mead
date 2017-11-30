@@ -6,6 +6,7 @@
 #
 
 library(shiny)
+library(shinyjs) 
 library(lazyeval)
 library(dplyr)
 library(DT)
@@ -24,7 +25,8 @@ source("./functions/test_functions.R")
 filtered_rRNA_obj <- list()
 
 shinyServer(function(input, output, session) {
-  
+  #---------- listen for session reset -------#
+  observeEvent(input$reset_button, {js$reset()}) 
   #---------- rRNA object import -------------#
   rRNAobj <- reactive({
     validate(
