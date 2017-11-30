@@ -37,10 +37,7 @@ shinyServer(function(input, output, session) {
     validate(
       need(input$qiime != "", "Please select a qiime file")
     )
-    return_obj <- pmartRseq::as.seqData(e_data = as.character(input$biom$datapath), f_data = as.character(input$qiime$datapath), edata_cname = "OTU", data_type = "rRNA", taxa_cname = "taxonomy2")
-    #----check for unhallowed characters in column names----#
-    names(return_obj$f_data) <- make.names(names(return_obj$f_data))
-    return(return_obj)
+    return(pmartRseq::as.seqData(e_data = as.character(input$biom$datapath), f_data = as.character(input$qiime$datapath), edata_cname = "OTU", data_type = "rRNA", taxa_cname = "taxonomy2"))
   }) #end rRNAobj
   
   #-------- filter history support -----------#
@@ -94,21 +91,23 @@ shinyServer(function(input, output, session) {
     }
     sample_names <- list()
     for (i in 1:length(check_boxes)) {
-      # build in a check for no samples to remove
-      # if (length(check_boxes[i]) == 0){
-      #   return(filtered_rRNA_obj)
-      # }
       sample_names[[i]] <- dplyr::filter_(temp, interp(~v%in%input[[check_boxes[i]]], v=as.name(check_boxes[i]))) %>%
-        dplyr::select_(attr(filtered_rRNA_obj, "cnames")$fdata_cname)#find the column name and associated check box
+        dplyr::select(eval(quote(attr(filtered_rRNA_obj, "cnames")$fdata_cname)))#find the column name and associated check box
     }
     sample_names <- Reduce(intersect, sample_names)
-    to_remove <- temp[ which(!(as.character(temp[, attr(filtered_rRNA_obj, "cnames")$fdata_cname]) %in% as.character(unlist(sample_names)))),
-                       attr(filtered_rRNA_obj, "cnames")$fdata_cname]
-    filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$metadata[[input$metadata_filter_go]],
-                                               omicsData = filtered_rRNA_obj,
-                                               samps_to_remove = to_remove)
-    
-    
+    #check if there are no samples to remove 
+    browser()
+    if (nrow(sample_names) == length(temp[, attr(filtered_rRNA_obj, "cnames")$fdata_cname])) {
+      #if no samples to remove return unmodified object
+      return(filtered_rRNA_obj)
+    } else {
+      # remove the samples
+      to_remove <- temp[ which(!(as.character(temp[, attr(filtered_rRNA_obj, "cnames")$fdata_cname]) %in% as.character(unlist(sample_names)))),
+                         attr(filtered_rRNA_obj, "cnames")$fdata_cname]
+      filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$metadata[[input$metadata_filter_go]],
+                                                 omicsData = filtered_rRNA_obj,
+                                                 samps_to_remove = to_remove) 
+    }
   })
   
   #----------------- observe resets ----------#
