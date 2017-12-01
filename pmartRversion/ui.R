@@ -164,7 +164,21 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
            h3("Richness"),
            uiOutput("rich_index"),
            plotOutput("rich_plot"),
-           verbatimTextOutput("rich_summary")),
+           verbatimTextOutput("rich_summary"),
+           br(),
+           h3("Abundance"),
+           plotOutput("abun_plot"),
+           verbatimTextOutput("abun_summary"),
+           br(),
+           h3("Evenness"),
+           uiOutput("even_index"),
+           plotOutput("even_plot"),
+           verbatimTextOutput("even_summary"),
+           br(),
+           h3("Effective Species"),
+           plotOutput("effsp_plot"),
+           verbatimTextOutput("effsp_summary")
+  ),
  
   tabPanel("Ordination",
            h3("Parameters"),
@@ -190,7 +204,8 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
            uiOutput("ellipses"),
            #DT::dataTableOutput("beta"),
            #DT::dataTableOutput("mydist"),
-           plotOutput("ord_plot")),
+           plotOutput("ord_plot")
+  ),
  
  tabPanel("Differential Abundance",
           h3("Parameters"),
@@ -206,7 +221,8 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
           verbatimTextOutput("da_summary"),
           plotOutput("flag_plot"),
           plotOutput("logfc_plot"),
-          plotOutput("plot_all_da")),
+          plotOutput("plot_all_da")
+  ),
  
  tabPanel("Indicator Species",
           h3("Parameters"),
@@ -220,7 +236,8 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
           verbatimTextOutput("indsp_summary"),
           uiOutput("indsp_xaxis"),
           uiOutput("indsp_group"),
-          plotOutput("indsp_plot")),
+          plotOutput("indsp_plot")
+  ),
  
  tabPanel("Statistics Results",
           conditionalPanel(
@@ -233,14 +250,15 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
           # }else{
           #   p("This page is for combining the results of differential abundance analysis and indicator species analysis.")
           # }
-          ),
+  ),
  
  tabPanel("Download",
           uiOutput("files_to_download"),
           downloadButton("downloadData","Download")
-          ),
+  ),
   
  tabPanel("Meg's Tab",
-          uiOutput("megs_output"))
+          uiOutput("megs_output")
+  )
   
 )) #end page
