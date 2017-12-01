@@ -2,7 +2,7 @@
 #list of all packages
 packs <- installed.packages()[,"Package"]
 #list of required packages
-dependencies <- c("shiny", "shinyjs", "lazyeval", "V8", "dplyr", "DT", "ggplot2", "vegan", "goeveg", "ploty")
+dependencies <- c("shiny", "shinyjs", "lazyeval", "V8", "dplyr", "DT", "ggplot2", "vegan", "goeveg", "plotly")
 
 #check for missing packages
 missing <- dependencies[!(dependencies %in% packs)]
