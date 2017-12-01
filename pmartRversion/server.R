@@ -16,6 +16,7 @@ library(pmartRseq)
 #library(phyloseq)
 library(vegan)
 library(goeveg)
+library(plotly)
 source("./functions/helper_functions.R")
 source("./functions/test_functions.R")
 #source("./Report/R/report.R")
@@ -450,27 +451,27 @@ shinyServer(function(input, output, session) {
   })
   output$group_DF <- DT::renderDataTable(group_df_tab())
   #)
-  
+
   # Also output a table showing the number of reps in each group
   group_freq_tab <- reactive({
     as.data.frame(table(attr(groupDF(),"group_DF")$Group))
   })
   output$group_tab <- DT::renderDataTable(group_freq_tab())
   
-  
   # ################ Outliers Tab #################
   
   outlier_jaccard <- reactive({
+    #TODO: force the user to select a grouping before this will display
     pmartRseq::jaccard_calc(omicsData = groupDF())
   })
   
-  jac_plot_obj <- reactive({
-    plot(outlier_jaccard())
-  })
+  # jac_plot_obj <- reactive({
+  #   plot(outlier_jaccard())
+  # })
   
-  output$jac_plot <- renderPlot({
+  output$jac_plot <- renderPlotly({
     #plot(outlier_jaccard())
-    print(jac_plot_obj())
+    plotly::ggplotly(plot(outlier_jaccard()))
   })
   
   
@@ -501,14 +502,15 @@ shinyServer(function(input, output, session) {
                 choices = colnames(normalized_data()$e_meta)[-which(colnames(normalized_data()$e_meta)==attr(normalized_data(),"cnames")$edata_cname)])
   })
   
-  norm_plot_obj <- reactive({
-    plot(normalized_data(), class=input$norm_class)
-  })
+  # norm_plot_obj <- reactive({
+  #   plot(normalized_data(), class=input$norm_class)
+  # })
   # Try to make a stacked bar plot - not working right now
-  output$norm_plot <- renderPlot({
+  output$norm_plot <- renderPlotly({
     #browser()
     #plot(normalized_data(), class="Phylum")
-    print(norm_plot_obj())
+    #print(norm_plot_obj())
+    plotly::ggplotly( plot(normalized_data(), class=input$norm_class))
   })
   
   # Calculate abundance on normalized data
@@ -535,18 +537,18 @@ shinyServer(function(input, output, session) {
     plot(abun_raw(), rich_raw(), plot_title="Raw Data")
   })
   # Create a plot of raw abundance vs raw richness
-  output$ra_raw <- renderPlot({
+  output$ra_raw <- renderPlotly({
     #plot(abun_raw(), rich_raw(), plot_title="Raw Data")
-    print(ra_raw_plot())
+    plotly::ggplotly(ra_raw_plot())
   })
   
   ra_norm_plot <- reactive({
     plot(abun_norm(), rich_norm(), plot_title="Normalized Data")
   })
   # Create a plot of normalized abundance vs normalized richness to see if there is a reduction in correlation
-  output$ra_norm <- renderPlot({
+  output$ra_norm <- renderPlotly({
     #plot(abun_norm(), rich_norm(), plot_title="Normalized Data")
-    print(ra_norm_plot())
+    plotly::ggplotly(ra_norm_plot())
   })
   
   ################ Community Metrics Tab #################

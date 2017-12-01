@@ -130,7 +130,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
  tabPanel("Outliers",
           p("Use the Jaccard Index to look for other outliers in the dataset."),
           br(),
-          plotOutput("jac_plot")
+          plotlyOutput("jac_plot")
    ),
  
   tabPanel("Normalization",
@@ -145,11 +145,11 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
              function might be preferable."),
            fluidRow(
              splitLayout(cellWidths = c("50%","50%"), 
-                         plotOutput("ra_raw"),
-                         plotOutput("ra_norm"))
+                         plotlyOutput("ra_raw"),
+                         plotlyOutput("ra_norm"))
            ),
            uiOutput("norm_class"),
-           plotOutput("norm_plot")
+           plotlyOutput("norm_plot")
   ),
   
   tabPanel("Community Metrics",
