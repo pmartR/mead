@@ -1,3 +1,36 @@
+# Get dependencies imported if any are missing
+#list of all packages
+packs <- installed.packages()[,"Package"]
+#list of required packages
+dependencies <- c("shiny", "shinyjs", "lazyeval", "V8", "dplyr", "DT", "ggplot2", "vegan", "goeveg", "ploty")
+
+#check for missing packages
+missing <- dependencies[!(dependencies %in% packs)]
+
+#install missing ones
+if (length(missing) > 0) install.packages(missing, dependencies = TRUE)
+
+# add in custom packages
+if (!("filterWidget" %in% packs)) devtools::install("filterWidget")
+if (!("pmartRseq" %in% packs)) devtools::install("../../pmartRseq/")
+
+# source packages and functions
+library(shiny)
+library(shinyjs) 
+library(V8)
+library(lazyeval)
+library(dplyr)
+library(DT)
+library(filterWidget)
+library(ggplot2)
+library(pmartRseq)
+#library(phyloseq)
+library(vegan)
+library(goeveg)
+library(plotly)
+source("./functions/helper_functions.R")
+source("./functions/test_functions.R")
+
 kovera_k <- 0
 kovera_A <- 0
 source("./functions/helper_functions.R")
@@ -201,7 +234,21 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
            h3("Richness"),
            uiOutput("rich_index"),
            plotOutput("rich_plot"),
-           verbatimTextOutput("rich_summary")),
+           verbatimTextOutput("rich_summary"),
+           br(),
+           h3("Abundance"),
+           plotOutput("abun_plot"),
+           verbatimTextOutput("abun_summary"),
+           br(),
+           h3("Evenness"),
+           uiOutput("even_index"),
+           plotOutput("even_plot"),
+           verbatimTextOutput("even_summary"),
+           br(),
+           h3("Effective Species"),
+           plotOutput("effsp_plot"),
+           verbatimTextOutput("effsp_summary")
+  ),
  
   tabPanel("Ordination",
            h3("Parameters"),
@@ -227,7 +274,8 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
            uiOutput("ellipses"),
            #DT::dataTableOutput("beta"),
            #DT::dataTableOutput("mydist"),
-           plotOutput("ord_plot")),
+           plotOutput("ord_plot")
+  ),
  
  tabPanel("Differential Abundance",
           h3("Parameters"),
@@ -243,7 +291,8 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
           verbatimTextOutput("da_summary"),
           plotOutput("flag_plot"),
           plotOutput("logfc_plot"),
-          plotOutput("plot_all_da")),
+          plotOutput("plot_all_da")
+  ),
  
  tabPanel("Indicator Species",
           h3("Parameters"),
@@ -257,7 +306,8 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
           verbatimTextOutput("indsp_summary"),
           uiOutput("indsp_xaxis"),
           uiOutput("indsp_group"),
-          plotOutput("indsp_plot")),
+          plotOutput("indsp_plot")
+  ),
  
  tabPanel("Statistics Results",
           conditionalPanel(
@@ -270,14 +320,15 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
           # }else{
           #   p("This page is for combining the results of differential abundance analysis and indicator species analysis.")
           # }
-          ),
+  ),
  
  tabPanel("Download",
           uiOutput("files_to_download"),
           downloadButton("downloadData","Download")
-          ),
+  ),
   
  tabPanel("Meg's Tab",
-          uiOutput("megs_output"))
+          uiOutput("megs_output")
+  )
   
 )) #end page

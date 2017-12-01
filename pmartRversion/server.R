@@ -3,6 +3,9 @@
 # You can find out more about building applications with Shiny here:
 #
 # http://shiny.rstudio.com
+#
+
+
 #source("./Report/R/report.R")
 
 #Sys.setenv(R_ZIPCMD="/usr/bin/zip")
@@ -617,6 +620,87 @@ shinyServer(function(input, output, session) {
   output$rich_summary <- renderPrint({
     summary(rich())
   })
+  
+  #----------- abundance example ----------#
+  
+  # Calculate abundance
+  abun <- reactive({
+    validate(
+      need(length(input$xaxis) > 0, "Must include a valid x-axis for the plot.")
+    )
+    
+    return(pmartRseq::abundance_calc(groupDF()))
+  })
+  
+  abun_plot_obj <- reactive({
+    plot(abun(), x_axis=input$xaxis, color=input$color)
+  })
+  # Show evenness plot
+  output$abun_plot <- renderPlot({
+    #plot(even(), x_axis=input$xaxis, color=input$color)
+    print(abun_plot_obj())
+  })
+  
+  output$abun_summary <- renderPrint({
+    summary(abun())
+  })
+  
+  #----------- evenness example ----------#
+  
+  # Which evenness indices to calculate
+  output$even_index <- renderUI({
+    checkboxGroupInput("even_index",
+                       label = "Evenness Index",
+                       choices = list("Shannon"="shannon","Simpson"="simpson"),
+                       selected = c("shannon","simpson"))
+  })
+  
+  # Calculate evenness
+  even <- reactive({
+    validate(
+      need(length(input$even_index) > 0, "There needs to be at least one evenness index")
+    )
+    
+    return(pmartRseq::evenness_calc(groupDF(), index=input$even_index))
+  })
+  
+  even_plot_obj <- reactive({
+    plot(even(), x_axis=input$xaxis, color=input$color)
+  })
+  # Show evenness plot
+  output$even_plot <- renderPlot({
+    #plot(even(), x_axis=input$xaxis, color=input$color)
+    print(even_plot_obj())
+  })
+  
+  output$even_summary <- renderPrint({
+    summary(even())
+  })
+  
+  #----------- effective species example ----------#
+  
+  # Calculate effsp
+  effsp <- reactive({
+    validate(
+      need(length(input$xaxis) > 0, "Must include a valid x-axis for the plot.")
+    )
+    
+    return(pmartRseq::effsp_calc(groupDF()))
+  })
+  
+  effsp_plot_obj <- reactive({
+    plot(effsp(), x_axis=input$xaxis, color=input$color)
+  })
+  # Show evenness plot
+  output$effsp_plot <- renderPlot({
+    #plot(effsp(), x_axis=input$xaxis, color=input$color)
+    print(effsp_plot_obj())
+  })
+  
+  output$effsp_summary <- renderPrint({
+    summary(effsp())
+  })
+
   
   
   ################ Beta Diversity Tab #################
