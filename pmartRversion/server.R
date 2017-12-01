@@ -5,6 +5,23 @@
 # http://shiny.rstudio.com
 #
 
+# Get dependencies imported if any are missing
+#list of all packages
+packs <- installed.packages()[,"Package"]
+#list of required packages
+dependencies <- c("shiny", "shinyjs", "lazyeval", "V8", "dplyr", "DT", "ggplot2", "vegan", "goeveg", "ploty")
+
+#check for missing packages
+missing <- dependencies[!(dependencies %in% packs)]
+
+#install missing ones
+if (length(missing) > 0) install.packages(missing, dependencies = TRUE)
+
+# add in custom packages
+if (!("filterWidget" %in% packs)) devtools::install("filterWidget")
+if (!("pmartRseq" %in% packs)) devtools::install("../../pmartRseq/")
+
+# source packages and functions
 library(shiny)
 library(shinyjs) 
 library(lazyeval)
