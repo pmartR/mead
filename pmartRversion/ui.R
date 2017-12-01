@@ -1,3 +1,36 @@
+# Get dependencies imported if any are missing
+#list of all packages
+packs <- installed.packages()[,"Package"]
+#list of required packages
+dependencies <- c("shiny", "shinyjs", "lazyeval", "V8", "dplyr", "DT", "ggplot2", "vegan", "goeveg", "ploty")
+
+#check for missing packages
+missing <- dependencies[!(dependencies %in% packs)]
+
+#install missing ones
+if (length(missing) > 0) install.packages(missing, dependencies = TRUE)
+
+# add in custom packages
+if (!("filterWidget" %in% packs)) devtools::install("filterWidget")
+if (!("pmartRseq" %in% packs)) devtools::install("../../pmartRseq/")
+
+# source packages and functions
+library(shiny)
+library(shinyjs) 
+library(V8)
+library(lazyeval)
+library(dplyr)
+library(DT)
+library(filterWidget)
+library(ggplot2)
+library(pmartRseq)
+#library(phyloseq)
+library(vegan)
+library(goeveg)
+library(plotly)
+source("./functions/helper_functions.R")
+source("./functions/test_functions.R")
+
 kovera_k <- 0
 kovera_A <- 0
 source("./functions/helper_functions.R")

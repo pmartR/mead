@@ -3,26 +3,9 @@
 # You can find out more about building applications with Shiny here:
 #
 # http://shiny.rstudio.com
-<<<<<<< HEAD
 #
 
-library(shiny)
-library(shinyjs) 
-library(V8)
-library(lazyeval)
-library(dplyr)
-library(DT)
-library(filterWidget)
-library(ggplot2)
-library(pmartRseq)
-#library(phyloseq)
-library(vegan)
-library(goeveg)
-library(plotly)
-source("./functions/helper_functions.R")
-source("./functions/test_functions.R")
-=======
->>>>>>> 2f8cb516aee197face9aadb354670e04eedb7898
+
 #source("./Report/R/report.R")
 
 #Sys.setenv(R_ZIPCMD="/usr/bin/zip")
