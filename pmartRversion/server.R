@@ -625,6 +625,10 @@ shinyServer(function(input, output, session) {
   
   # Calculate abundance
   abun <- reactive({
+    validate(
+      need(length(input$xaxis) > 0, "Must include a valid x-axis for the plot.")
+    )
+    
     return(pmartRseq::abundance_calc(groupDF()))
   })
   
@@ -677,6 +681,10 @@ shinyServer(function(input, output, session) {
   
   # Calculate effsp
   effsp <- reactive({
+    validate(
+      need(length(input$xaxis) > 0, "Must include a valid x-axis for the plot.")
+    )
+    
     return(pmartRseq::effsp_calc(groupDF()))
   })
   
