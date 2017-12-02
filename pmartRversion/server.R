@@ -366,7 +366,7 @@ shinyServer(function(input, output, session) {
   
   
   group_vars <- reactive({
-    intersect(which(lapply(apply(filtered_data()$f_data, 2, function(z) table(z))[unlist(lapply(apply(filtered_data()$f_data, 2, function(x) table(x)), function(y) any(is.finite(y))))], function(w) max(w)) > 2), which(apply(filtered_data()$f_data, 2, function(v) length(unique(v))) > 2))
+    intersect(which(lapply(apply(filtered_data()$f_data, 2, function(z) table(z))[unlist(lapply(apply(filtered_data()$f_data, 2, function(x) table(x)), function(y) any(is.finite(y))))], function(w) max(w)) > 2), which(apply(filtered_data()$f_data, 2, function(v) length(unique(v))) >= 2))
     
   })
   
@@ -889,8 +889,8 @@ shinyServer(function(input, output, session) {
     sliderInput("pval_thresh",
                 label = "P-value significance threshold",
                 min = 0,
-                max = 1,
-                step = 0.01,
+                max = 0.5,
+                step = 0.001,
                 value = 0.05)
   })
   
@@ -1090,6 +1090,90 @@ shinyServer(function(input, output, session) {
     pmartRseq::plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2", x_lab = "Phylum")
   })
   #}
+  
+  ################ ALDEx2 Tab #################
+  #----------- aldex2 ----------#
+
+  # Select which variables to use as main effects
+  output$pa_mainEffects <- renderUI({
+      selectInput("pa_mainEffects",
+                  label = "Main Effect(s) to use in Model",
+                  choices = c("NA"="NULL",colnames(filtered_data()$f_data)[group_vars()]),
+                  selected = "NULL",
+                  multiple = TRUE)
+  })
+
+  # Select which variables to use as random effects
+  output$pa_randomEffect <- renderUI({
+    selectInput("pa_randomEffect",
+                label = "Optional, Random Effect to use in Model",
+                choices = c("NA"="NULL",colnames(filtered_data()$f_data)[group_vars()]),
+                selected = "NULL",
+                multiple = TRUE)
+  })
+
+  output$pa_Interactions <- renderUI({
+    checkboxInput("pa_Interactions",
+                  label = "Include Interactions",
+                  value=FALSE)
+  })
+
+  output$mcsamples <- renderUI({
+    numericInput("mcsamples",
+                 label="Number of Monte Carlo Samples",
+                 value=128)
+  })
+
+
+  observeEvent(input$submit_pa, {
+
+    # Perform differential abundance analysis
+    pa_results <<- reactive({
+      validate(need(length(input$mcsamples) == 1, "Need to specify number of Monte Carlo samples"))
+      #validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
+
+      if("NULL" %in% input$pa_mainEffects){
+          pa_mE <- NULL
+      }else{
+        pa_mE <- input$pa_mainEffects
+      }
+      
+      if("NULL" %in% input$pa_randomEffect){
+        pa_rE <- NULL
+      }else{
+        pa_rE <- input$pa_randomEffect
+      }
+      
+      return(pmartRseq::pmartRseq_aldex2(omicsData = groupDF(), mainEffects = pa_mE, randomEffect = pa_rE, interactions = input$pa_Interactions, mc.samples = input$mcsamples))
+
+    })
+
+    # Look at the results - this is hard to look at, maybe remove?
+    output$pa_res <- DT::renderDataTable(pa_results()$results)
+
+    output$pa_summary <- renderPrint({
+      summary(pa_results())
+    })
+
+    pa_pval_plot_obj <<- reactive({
+      plot(pa_results(), type = "pvals")
+    })
+    # Heatmap showing the log2foldchanges of differentially abundant features
+    output$pa_pval_plot <- renderPlot({
+      #plot(diffabun_res(), type = "logfc")
+      print(pa_pval_plot_obj())
+    })
+
+    pa_flag_plot_obj <<- reactive({
+      plot(pa_results(), type = "flag")
+    })
+    # Plot showing number differentially abundant in each comparison and direction of change
+    output$pa_flag_plot <- renderPlot({
+      #plot(diffabun_res(), type = "flag")
+      print(pa_flag_plot_obj())
+    })
+
+  }, autoDestroy = FALSE)
   
   ################ Download Tab #################
   output$files_to_download <- renderUI({

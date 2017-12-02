@@ -322,6 +322,22 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
           # }
   ),
  
+ tabPanel("Differential Abundance - ALDEx2",
+          h3("Parameters"),
+          uiOutput("pa_mainEffects"),
+          uiOutput("pa_randomEffect"),
+          uiOutput("pa_Interactions"),
+          uiOutput("mcsamples"),
+          actionButton(
+            inputId = "submit_pa",
+            label = "Submit"
+          ),
+          DT::dataTableOutput("pa_res"),
+          verbatimTextOutput("pa_summary"),
+          plotOutput("pa_pval_plot"),
+          plotOutput("pa_flag_plot")
+ ),
+ 
  tabPanel("Download",
           uiOutput("files_to_download"),
           downloadButton("downloadData","Download")
