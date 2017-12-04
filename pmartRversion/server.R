@@ -370,21 +370,28 @@ shinyServer(function(input, output, session) {
     
   })
   
-  # Input main effects used for groupings
-  output$group1 <- renderUI({
-    selectInput("group1",
-                label = "Main Effect 1",
-                choices = colnames(filtered_data()$f_data)[group_vars()])
+  output$gdfMainEffect <- renderUI({
+    selectInput("gdfMainEffect",
+                label = "Main Effect(s) to use for Groupings",
+                choices = colnames(filtered_data()$f_data)[group_vars()],
+                multiple = TRUE)
   })
   
-  # Can have up to 2 main effects
-  output$group2 <- renderUI({
-    selectInput("group2",
-                label = "Main Effect 2",
-                choices = c("NA",colnames(filtered_data()$f_data)[group_vars()]),
-                selected = NULL)
-    #groupDesignation
-  })
+  # # Input main effects used for groupings
+  # output$group1 <- renderUI({
+  #   selectInput("group1",
+  #               label = "Main Effect 1",
+  #               choices = colnames(filtered_data()$f_data)[group_vars()])
+  # })
+  # 
+  # # Can have up to 2 main effects
+  # output$group2 <- renderUI({
+  #   selectInput("group2",
+  #               label = "Main Effect 2",
+  #               choices = c("NA",colnames(filtered_data()$f_data)[group_vars()]),
+  #               selected = NULL)
+  #   #groupDesignation
+  # })
   
   # output$covs <- renderUI({
   #   checkboxInput("covs",
@@ -412,11 +419,7 @@ shinyServer(function(input, output, session) {
   
   # Create groups with main effects
   groupDF <- reactive({
-    if(input$group2 == "NA"){
-      mainEffects <- input$group1
-    }else{
-      mainEffects <- c(input$group1, input$group2)
-    }
+      mainEffects <- input$gdfMainEffect
     # if(!is.na(input$cov1) | !is.na(input$cov2)){
     #   covariates <- c(input$cov1, input$cov2)
     #   if(any(is.na(covariates))){

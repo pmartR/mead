@@ -178,10 +178,11 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
            #verbatimTextOutput("nrow_edata"),
            h2("Groupings"),
            h3("Main Effects"),
-           fluidRow(
-              column(width=3, uiOutput("group1")),
-              column(width=3, uiOutput("group2"))
-              ),
+           # fluidRow(
+           #    column(width=3, uiOutput("group1")),
+           #    column(width=3, uiOutput("group2"))
+           #    ),
+           uiOutput("gdfMainEffect"),
            #actionButton("covs","Add Covariates"),
            # h3("Covariates"),
            # fluidRow(
