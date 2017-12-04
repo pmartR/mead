@@ -897,8 +897,17 @@ shinyServer(function(input, output, session) {
   output$comparisons <- renderUI({
     checkboxGroupInput("comparisons",
                        label = "Differential abundance pairwise comparisons",
-                       choices = lapply(c(1:(factorial(length(unique(attr(groupDF(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(groupDF(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(groupDF(),"group_DF")$Group),2)[,x], collapse="  VS  ")),
-                       selected = sapply(c(1:(factorial(length(unique(attr(groupDF(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(groupDF(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(groupDF(),"group_DF")$Group),2)[,x], collapse="  VS  ")))
+                       choices = lapply(c(1:(factorial(length(unique(attr(groupDF(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(groupDF(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(groupDF(),"group_DF")$Group),2)[,x], collapse="  VS  ")))
+  })
+  
+  observe({
+    if(input$selectall == 0){
+      return(NULL)
+    }else if(input$selectall%%2 == 0){
+      updateCheckboxGroupInput(session, "comparisons","Differential abundance pairwise comparisons", choices=lapply(c(1:(factorial(length(unique(attr(groupDF(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(groupDF(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(groupDF(),"group_DF")$Group),2)[,x], collapse="  VS  ")))
+    }else{
+      updateCheckboxGroupInput(session, "comparisons","Differential abundance pairwise comparisons", choices=lapply(c(1:(factorial(length(unique(attr(groupDF(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(groupDF(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(groupDF(),"group_DF")$Group),2)[,x], collapse="  VS  ")), selected=sapply(c(1:(factorial(length(unique(attr(groupDF(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(groupDF(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(groupDF(),"group_DF")$Group),2)[,x], collapse="  VS  ")))
+    }
   })
   
   observeEvent(input$submit_da, {
