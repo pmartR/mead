@@ -2,7 +2,7 @@
 #list of all packages
 packs <- installed.packages()[,"Package"]
 #list of required packages
-dependencies <- c("shiny", "shinyjs", "lazyeval", "V8", "dplyr", "DT", "ggplot2", "vegan", "goeveg", "plotly")
+dependencies <- c("shiny", "shinyjs", "lazyeval", "V8", "dplyr", "DT", "ggplot2", "vegan", "goeveg", "plotly", "shinycssloaders")
 
 #check for missing packages
 missing <- dependencies[!(dependencies %in% packs)]
@@ -28,6 +28,7 @@ library(pmartRseq)
 library(vegan)
 library(goeveg)
 library(plotly)
+library(shinycssloaders)
 source("./functions/helper_functions.R")
 source("./functions/test_functions.R")
 
@@ -263,7 +264,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
              inputId = "submit_goe",
              label = "Submit"
            ),
-           plotOutput("dimcheck"),
+           withSpinner(plotOutput("dimcheck")),
            #uiOutput("ord_method"),
            fluidRow(
              column(width=3, uiOutput("k")),
@@ -280,7 +281,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
            uiOutput("ellipses"),
            #DT::dataTableOutput("beta"),
            #DT::dataTableOutput("mydist"),
-           plotOutput("ord_plot")
+           withSpinner(plotOutput("ord_plot"))
   ),
  
  tabPanel("Differential Abundance",

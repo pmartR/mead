@@ -86,7 +86,7 @@ shinyServer(function(input, output, session) {
     }
     sample_names <- Reduce(intersect, sample_names)
     #check if there are no samples to remove 
-    browser()
+    #browser()
     if (nrow(sample_names) == length(temp[, attr(filtered_rRNA_obj, "cnames")$fdata_cname])) {
       #if no samples to remove return unmodified object
       return(filtered_rRNA_obj)
@@ -777,15 +777,18 @@ shinyServer(function(input, output, session) {
     return(pmartRseq::pmartRseq_to_vegan(normalized_data()))
   })
   
-  observeEvent(input$submit_goe, {
-    dimcheck_obj <<- reactive({
-      goeveg::dimcheckMDS(vegdata(), distance = input$beta_index, autotransform = FALSE)
-    })
+  # observeEvent(input$submit_goe, {
+  #   dimcheck_obj <<- reactive({
+  #     goeveg::dimcheckMDS(vegdata(), distance = input$beta_index, autotransform = FALSE)
+  #   })
     output$dimcheck <- renderPlot({
       #goeveg::dimcheckMDS(vegdata(), distance = input$beta_index, autotransform = FALSE)
-      print(dimcheck_obj())
+      req(input$submit_goe)
+      Sys.sleep(5)
+      # print(dimcheck_obj())
+      print(goeveg::dimcheckMDS(vegdata(), distance = input$beta_index, autotransform = FALSE))
     })
-  })
+  # })
   
   # output$ord_method <- renderUI({
   #   selectInput("ord_method",
@@ -848,7 +851,7 @@ shinyServer(function(input, output, session) {
       pmartRseq::pmartRseq_NMDS(res = vegmds(), omicsData = normalized_data(), grp = input$ord_colors, k = input$k, 
                                 x_axis = input$ord_x, y_axis = input$ord_y, ellipses=input$ellipses)
     })
-    
+  })
     # Plot showing beta diversity
     output$ord_plot <- renderPlot({
       #if(input$ord_method == "NMDS"){
@@ -856,13 +859,15 @@ shinyServer(function(input, output, session) {
       #           grp = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]),ellipses=input$ellipses)
       #pmartRseq::pmartRseq_NMDS(res = vegmds(), omicsData = normalized_data(), grp = input$ord_colors, k = input$k, 
       #                         x_axis = input$ord_x, y_axis = input$ord_y, ellipses=input$ellipses)
+      req(input$submit_ord)
+      Sys.sleep(5)
       print(ord_plot_obj())
       # }else if(input$ord_method == "PCA"){
       #   mead_PCA(XX = vegmds(),
       #            ZZ = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]))
       # }
     })
-  })
+
   
   
   ################ Differential Abundance Tab #################
