@@ -2,7 +2,7 @@
 #list of all packages
 packs <- installed.packages()[,"Package"]
 #list of required packages
-dependencies <- c("shiny", "shinyjs", "lazyeval", "V8", "dplyr", "DT", "ggplot2", "vegan", "goeveg", "plotly")
+dependencies <- c("shiny", "shinyjs", "lazyeval", "V8", "dplyr", "DT", "ggplot2", "vegan", "goeveg", "plotly", "shinycssloaders")
 
 #check for missing packages
 missing <- dependencies[!(dependencies %in% packs)]
@@ -28,6 +28,7 @@ library(pmartRseq)
 library(vegan)
 library(goeveg)
 library(plotly)
+library(shinycssloaders)
 source("./functions/helper_functions.R")
 source("./functions/test_functions.R")
 
@@ -128,6 +129,11 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
   ),
   br(),
   hr(),
+  # h3("Taxonomic Rollup"),
+  # p("Roll up from OTU-level data to a specified taxonomic level"),
+  # uiOutput("taxa_level"),
+  # br(),
+  # hr(),
   fluidRow(
     column(width = 4, 
            h4("Sample Reads"),
@@ -173,10 +179,11 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
            #verbatimTextOutput("nrow_edata"),
            h2("Groupings"),
            h3("Main Effects"),
-           fluidRow(
-              column(width=3, uiOutput("group1")),
-              column(width=3, uiOutput("group2"))
-              ),
+           # fluidRow(
+           #    column(width=3, uiOutput("group1")),
+           #    column(width=3, uiOutput("group2"))
+           #    ),
+           uiOutput("gdfMainEffect"),
            #actionButton("covs","Add Covariates"),
            # h3("Covariates"),
            # fluidRow(
@@ -276,7 +283,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
              inputId = "submit_goe",
              label = "Submit"
            ),
-           plotOutput("dimcheck"),
+           withSpinner(plotOutput("dimcheck")),
            #uiOutput("ord_method"),
            fluidRow(
              column(width=3, uiOutput("k")),
@@ -293,7 +300,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
            uiOutput("ellipses"),
            #DT::dataTableOutput("beta"),
            #DT::dataTableOutput("mydist"),
-           plotOutput("ord_plot")
+           withSpinner(plotOutput("ord_plot"))
   ),
  
  tabPanel("Differential Abundance",
@@ -301,6 +308,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
           uiOutput("da_index"),
           uiOutput("pval_adjust"),
           uiOutput("pval_thresh"),
+          actionLink("selectall", "Select All"),
           uiOutput("comparisons"),
           actionButton(
             inputId = "submit_da",
@@ -340,6 +348,22 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
           #   p("This page is for combining the results of differential abundance analysis and indicator species analysis.")
           # }
   ),
+ 
+ tabPanel("Differential Abundance - ALDEx2",
+          h3("Parameters"),
+          uiOutput("pa_mainEffects"),
+          uiOutput("pa_randomEffect"),
+          uiOutput("pa_Interactions"),
+          uiOutput("mcsamples"),
+          actionButton(
+            inputId = "submit_pa",
+            label = "Submit"
+          ),
+          DT::dataTableOutput("pa_res"),
+          verbatimTextOutput("pa_summary"),
+          plotOutput("pa_pval_plot"),
+          plotOutput("pa_flag_plot")
+ ),
  
  tabPanel("Download",
           uiOutput("files_to_download"),

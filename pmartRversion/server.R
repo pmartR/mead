@@ -27,7 +27,6 @@ shinyServer(function(input, output, session) {
     validate(
       need(input$qiime != "", "Please select a qiime file")
     )
-    
     return(pmartRseq::as.seqData(e_data = as.character(input$biom$datapath), f_data = as.character(input$qiime$datapath), edata_cname = "OTU", data_type = "rRNA", taxa_cname = "taxonomy2"))
   }) #end rRNAobj
   
@@ -364,25 +363,32 @@ shinyServer(function(input, output, session) {
   
   
   group_vars <- reactive({
-    intersect(which(lapply(apply(filtered_data()$f_data, 2, function(z) table(z))[unlist(lapply(apply(filtered_data()$f_data, 2, function(x) table(x)), function(y) any(is.finite(y))))], function(w) max(w)) > 2), which(apply(filtered_data()$f_data, 2, function(v) length(unique(v))) > 2))
+    intersect(which(lapply(apply(filtered_data()$f_data, 2, function(z) table(z))[unlist(lapply(apply(filtered_data()$f_data, 2, function(x) table(x)), function(y) any(is.finite(y))))], function(w) max(w)) > 2), which(apply(filtered_data()$f_data, 2, function(v) length(unique(v))) >= 2))
     
   })
   
-  # Input main effects used for groupings
-  output$group1 <- renderUI({
-    selectInput("group1",
-                label = "Main Effect 1",
-                choices = colnames(filtered_data()$f_data)[group_vars()])
+  output$gdfMainEffect <- renderUI({
+    selectInput("gdfMainEffect",
+                label = "Main Effect(s) to use for Groupings",
+                choices = colnames(filtered_data()$f_data)[group_vars()],
+                multiple = TRUE)
   })
   
-  # Can have up to 2 main effects
-  output$group2 <- renderUI({
-    selectInput("group2",
-                label = "Main Effect 2",
-                choices = c("NA",colnames(filtered_data()$f_data)[group_vars()]),
-                selected = NULL)
-    #groupDesignation
-  })
+  # # Input main effects used for groupings
+  # output$group1 <- renderUI({
+  #   selectInput("group1",
+  #               label = "Main Effect 1",
+  #               choices = colnames(filtered_data()$f_data)[group_vars()])
+  # })
+  # 
+  # # Can have up to 2 main effects
+  # output$group2 <- renderUI({
+  #   selectInput("group2",
+  #               label = "Main Effect 2",
+  #               choices = c("NA",colnames(filtered_data()$f_data)[group_vars()]),
+  #               selected = NULL)
+  #   #groupDesignation
+  # })
   
   # output$covs <- renderUI({
   #   checkboxInput("covs",
@@ -410,11 +416,7 @@ shinyServer(function(input, output, session) {
   
   # Create groups with main effects
   groupDF <- reactive({
-    if(input$group2 == "NA"){
-      mainEffects <- input$group1
-    }else{
-      mainEffects <- c(input$group1, input$group2)
-    }
+      mainEffects <- input$gdfMainEffect
     # if(!is.na(input$cov1) | !is.na(input$cov2)){
     #   covariates <- c(input$cov1, input$cov2)
     #   if(any(is.na(covariates))){
@@ -444,8 +446,6 @@ shinyServer(function(input, output, session) {
   output$group_tab <- DT::renderDataTable(group_freq_tab())
   
   # ################ Outliers Tab #################
-  
-
   
   outlier_jaccard <- reactive({
     #TODO: force the user to select a grouping before this will display
@@ -814,15 +814,18 @@ shinyServer(function(input, output, session) {
     return(pmartRseq::pmartRseq_to_vegan(normalized_data()))
   })
   
-  observeEvent(input$submit_goe, {
-    dimcheck_obj <<- reactive({
-      goeveg::dimcheckMDS(vegdata(), distance = input$beta_index, autotransform = FALSE)
-    })
+  # observeEvent(input$submit_goe, {
+  #   dimcheck_obj <<- reactive({
+  #     goeveg::dimcheckMDS(vegdata(), distance = input$beta_index, autotransform = FALSE)
+  #   })
     output$dimcheck <- renderPlot({
       #goeveg::dimcheckMDS(vegdata(), distance = input$beta_index, autotransform = FALSE)
-      print(dimcheck_obj())
+      req(input$submit_goe)
+      Sys.sleep(5)
+      # print(dimcheck_obj())
+      print(goeveg::dimcheckMDS(vegdata(), distance = input$beta_index, autotransform = FALSE))
     })
-  })
+  # })
   
   # output$ord_method <- renderUI({
   #   selectInput("ord_method",
@@ -885,7 +888,7 @@ shinyServer(function(input, output, session) {
       pmartRseq::pmartRseq_NMDS(res = vegmds(), omicsData = normalized_data(), grp = input$ord_colors, k = input$k, 
                                 x_axis = input$ord_x, y_axis = input$ord_y, ellipses=input$ellipses)
     })
-    
+  })
     # Plot showing beta diversity
     output$ord_plot <- renderPlot({
       #if(input$ord_method == "NMDS"){
@@ -893,13 +896,15 @@ shinyServer(function(input, output, session) {
       #           grp = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]),ellipses=input$ellipses)
       #pmartRseq::pmartRseq_NMDS(res = vegmds(), omicsData = normalized_data(), grp = input$ord_colors, k = input$k, 
       #                         x_axis = input$ord_x, y_axis = input$ord_y, ellipses=input$ellipses)
+      req(input$submit_ord)
+      Sys.sleep(5)
       print(ord_plot_obj())
       # }else if(input$ord_method == "PCA"){
       #   mead_PCA(XX = vegmds(),
       #            ZZ = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]))
       # }
     })
-  })
+
   
   
   ################ Differential Abundance Tab #################
@@ -929,16 +934,25 @@ shinyServer(function(input, output, session) {
     sliderInput("pval_thresh",
                 label = "P-value significance threshold",
                 min = 0,
-                max = 1,
-                step = 0.01,
+                max = 0.5,
+                step = 0.001,
                 value = 0.05)
   })
   
   output$comparisons <- renderUI({
     checkboxGroupInput("comparisons",
                        label = "Differential abundance pairwise comparisons",
-                       choices = lapply(c(1:(factorial(length(unique(attr(groupDF(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(groupDF(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(groupDF(),"group_DF")$Group),2)[,x], collapse="  VS  ")),
-                       selected = sapply(c(1:(factorial(length(unique(attr(groupDF(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(groupDF(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(groupDF(),"group_DF")$Group),2)[,x], collapse="  VS  ")))
+                       choices = lapply(c(1:(factorial(length(unique(attr(groupDF(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(groupDF(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(groupDF(),"group_DF")$Group),2)[,x], collapse="  VS  ")))
+  })
+  
+  observe({
+    if(input$selectall == 0){
+      return(NULL)
+    }else if(input$selectall%%2 == 0){
+      updateCheckboxGroupInput(session, "comparisons","Differential abundance pairwise comparisons", choices=lapply(c(1:(factorial(length(unique(attr(groupDF(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(groupDF(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(groupDF(),"group_DF")$Group),2)[,x], collapse="  VS  ")))
+    }else{
+      updateCheckboxGroupInput(session, "comparisons","Differential abundance pairwise comparisons", choices=lapply(c(1:(factorial(length(unique(attr(groupDF(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(groupDF(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(groupDF(),"group_DF")$Group),2)[,x], collapse="  VS  ")), selected=sapply(c(1:(factorial(length(unique(attr(groupDF(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(groupDF(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(groupDF(),"group_DF")$Group),2)[,x], collapse="  VS  ")))
+    }
   })
   
   observeEvent(input$submit_da, {
@@ -1130,6 +1144,90 @@ shinyServer(function(input, output, session) {
     pmartRseq::plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2", x_lab = "Phylum")
   })
   #}
+  
+  ################ ALDEx2 Tab #################
+  #----------- aldex2 ----------#
+
+  # Select which variables to use as main effects
+  output$pa_mainEffects <- renderUI({
+      selectInput("pa_mainEffects",
+                  label = "Main Effect(s) to use in Model",
+                  choices = c("NA"="NULL",colnames(filtered_data()$f_data)[group_vars()]),
+                  selected = "NULL",
+                  multiple = TRUE)
+  })
+
+  # Select which variables to use as random effects
+  output$pa_randomEffect <- renderUI({
+    selectInput("pa_randomEffect",
+                label = "Optional, Random Effect to use in Model",
+                choices = c("NA"="NULL",colnames(filtered_data()$f_data)[group_vars()]),
+                selected = "NULL",
+                multiple = TRUE)
+  })
+
+  output$pa_Interactions <- renderUI({
+    checkboxInput("pa_Interactions",
+                  label = "Include Interactions",
+                  value=FALSE)
+  })
+
+  output$mcsamples <- renderUI({
+    numericInput("mcsamples",
+                 label="Number of Monte Carlo Samples",
+                 value=128)
+  })
+
+
+  observeEvent(input$submit_pa, {
+
+    # Perform differential abundance analysis
+    pa_results <<- reactive({
+      validate(need(length(input$mcsamples) == 1, "Need to specify number of Monte Carlo samples"))
+      #validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
+
+      if("NULL" %in% input$pa_mainEffects){
+          pa_mE <- NULL
+      }else{
+        pa_mE <- input$pa_mainEffects
+      }
+      
+      if("NULL" %in% input$pa_randomEffect){
+        pa_rE <- NULL
+      }else{
+        pa_rE <- input$pa_randomEffect
+      }
+      
+      return(pmartRseq::pmartRseq_aldex2(omicsData = groupDF(), mainEffects = pa_mE, randomEffect = pa_rE, interactions = input$pa_Interactions, mc.samples = input$mcsamples))
+
+    })
+
+    # Look at the results - this is hard to look at, maybe remove?
+    output$pa_res <- DT::renderDataTable(pa_results()$results)
+
+    output$pa_summary <- renderPrint({
+      summary(pa_results())
+    })
+
+    pa_pval_plot_obj <<- reactive({
+      plot(pa_results(), type = "pvals")
+    })
+    # Heatmap showing the log2foldchanges of differentially abundant features
+    output$pa_pval_plot <- renderPlot({
+      #plot(diffabun_res(), type = "logfc")
+      print(pa_pval_plot_obj())
+    })
+
+    pa_flag_plot_obj <<- reactive({
+      plot(pa_results(), type = "flag")
+    })
+    # Plot showing number differentially abundant in each comparison and direction of change
+    output$pa_flag_plot <- renderPlot({
+      #plot(diffabun_res(), type = "flag")
+      print(pa_flag_plot_obj())
+    })
+
+  }, autoDestroy = FALSE)
   
   ################ Download Tab #################
   output$files_to_download <- renderUI({
