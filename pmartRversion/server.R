@@ -27,6 +27,7 @@ shinyServer(function(input, output, session) {
     validate(
       need(input$qiime != "", "Please select a qiime file")
     )
+    
     return(pmartRseq::as.seqData(e_data = as.character(input$biom$datapath), f_data = as.character(input$qiime$datapath), edata_cname = "OTU", data_type = "rRNA", taxa_cname = "taxonomy2"))
   }) #end rRNAobj
   
@@ -84,9 +85,8 @@ shinyServer(function(input, output, session) {
       sample_names[[i]] <- dplyr::filter_(temp, interp(~v%in%input[[check_boxes[i]]], v=as.name(check_boxes[i]))) %>%
         dplyr::select(eval(quote(attr(filtered_rRNA_obj, "cnames")$fdata_cname)))#find the column name and associated check box
     }
-    sample_names <- Reduce(intersect, sample_names)
+    sample_names <- Reduce(dplyr::intersect, sample_names)
     #check if there are no samples to remove 
-    browser()
     if (nrow(sample_names) == length(temp[, attr(filtered_rRNA_obj, "cnames")$fdata_cname])) {
       #if no samples to remove return unmodified object
       return(filtered_rRNA_obj)
@@ -349,8 +349,6 @@ shinyServer(function(input, output, session) {
   # ################ Group Designation Tab #################
   
   output$summ_filt <- renderPrint({
-    #browser()
-    
     validate(
       need(!(is.null(metadata_obj())), message = "please import sample metadata")
     )
@@ -447,21 +445,64 @@ shinyServer(function(input, output, session) {
   
   # ################ Outliers Tab #################
   
+
+  
   outlier_jaccard <- reactive({
     #TODO: force the user to select a grouping before this will display
     pmartRseq::jaccard_calc(omicsData = groupDF())
   })
   
-  # jac_plot_obj <- reactive({
-  #   plot(outlier_jaccard())
-  # })
-  
-  output$jac_plot <- renderPlotly({
-    #plot(outlier_jaccard())
-    plotly::ggplotly(plot(outlier_jaccard()))
+  jac_plot_obj <- reactive({
+    plot(outlier_jaccard())
   })
   
   
+  output$outlier_jaccard_plot <- renderPlotly({
+    d <- event_data("plotly_selected")
+    p <- plotly::plot_ly(data = data.frame(outlier_jaccard()),
+                         x = ~quote(attr(outlier_jaccard(), "cname")$fdata_cname),
+                         y = ~Average) %>%
+      add_markers(key = ~eval(quote(attr(outlier_jaccard(), "cname")$fdata_cname)), color = I("black"))
+    if (!is.null(d)) {
+      m <- outlier_jaccard()[outlier_jaccard()[,eval(quote(attr(outlier_jaccard(),"cname")$fdata_cname))] %in% d[["key"]][[1]], ]
+      p <- add_markers(p, data = m, color = I("red"))
+    }
+    layout(p, dragmode = "lasso", showlegend = FALSE)
+  })
+  
+  abundance <- reactive({
+    abundances <- abundance_calc(omicsData = groupDF())
+    abundances$abundID <- rownames(abundances)
+    return(abundances)
+  })
+  
+  output$outlier_abundance_plot <- renderPlotly({
+    d <- event_data("plotly_selected")
+    p <- plotly::plot_ly(data = data.frame(abundance()),
+                         x = ~abundID,
+                         y = ~abundance) %>%
+      add_markers(key = ~abundID, color = I("black"))
+    if (!is.null(d)) {
+      m <- abundance()[abundance()$abundID %in% d[["key"]], ]
+      p <- add_markers(p, data = m, color = I("red"))
+    }
+    layout(p, dragmode = "lasso", showlegend = FALSE)
+  })
+  
+
+  output$outlier_richness_plot <- renderPlotly({
+    d <- event_data("plotly_selected")
+    long_richness <- reshape2::melt(rich_raw())
+    p <- plotly::plot_ly(data = long_richness,
+                         x = ~variable,
+                         y = ~value) %>%
+      add_markers(key = ~variable, color = I("black"))
+    if (!is.null(d)) {
+      m <- long_richness[long_richness$variable %in% d[["key"]], ]
+      p <- add_markers(p, data = m, color = I("red"))
+    }
+    layout(p, dragmode = "lasso", showlegend = FALSE)
+  })
   # ################ Normalization Tab #################
   
   # Select which normalization function to use
@@ -494,7 +535,6 @@ shinyServer(function(input, output, session) {
   # })
   # Try to make a stacked bar plot - not working right now
   output$norm_plot <- renderPlotly({
-    #browser()
     #plot(normalized_data(), class="Phylum")
     #print(norm_plot_obj())
     plotly::ggplotly( plot(normalized_data(), class=input$norm_class))

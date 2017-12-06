@@ -200,7 +200,26 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
  tabPanel("Outliers",
           p("Use the Jaccard Index to look for other outliers in the dataset."),
           br(),
-          plotlyOutput("jac_plot")
+          #plotOutput("jac_plot"),
+          fluidRow(
+            # column(width = 6,
+            #        plotOutput("outlier_abundance_plot", height=300,  brush = brushOpts(id = "plot_brush"))
+            #        ),
+            # column(width = 6,
+            #        h4("Brushed points"),
+            #        tableOutput("plot_brushedpoints")
+            #        )
+            column(width = 4,
+                   plotlyOutput("outlier_abundance_plot", height = 300)
+            ),
+            column(width = 4,
+                   plotlyOutput("outlier_jaccard_plot", height = 300)
+            ),
+            column(width = 4,
+                   plotlyOutput("outlier_richness_plot", height = 300)
+            )
+                   
+            )
    ),
  
   tabPanel("Normalization",
