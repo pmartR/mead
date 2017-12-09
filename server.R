@@ -619,9 +619,9 @@ shinyServer(function(input, output, session) {
     plot(a_div(), x_axis=input$xaxis, color=input$color)
   })
   # Show alpha diversity plot
-  output$adiv_plot <- renderPlot({
+  output$adiv_plot <- renderPlotly({
     #plot(a_div(), x_axis=input$xaxis, color=input$color)
-    print(adiv_plot_obj())
+   plotly::ggplotly(plot(a_div(), x_axis=input$xaxis, color=input$color, scales = 'free')) #ggplotly bugs without free scale
   })
   
   output$adiv_summary <- renderPrint({
@@ -649,12 +649,12 @@ shinyServer(function(input, output, session) {
   })
   
   rich_plot_obj <- reactive({
-    plot(rich(), x_axis=input$xaxis, color=input$color)
+    plot(rich(), x_axis=input$xaxis, color=input$color, scales = 'free')#ggplotly bugs without free scale
   })
   # Show richness plot
-  output$rich_plot <- renderPlot({
+  output$rich_plot <- renderPlotly({
     #plot(rich(), x_axis=input$xaxis, color=input$color)
-    print(rich_plot_obj())
+    plotly::ggplotly(rich_plot_obj())
   })
   
   output$rich_summary <- renderPrint({
@@ -676,9 +676,9 @@ shinyServer(function(input, output, session) {
     plot(abun(), x_axis=input$xaxis, color=input$color)
   })
   # Show evenness plot
-  output$abun_plot <- renderPlot({
+  output$abun_plot <- renderPlotly({
     #plot(even(), x_axis=input$xaxis, color=input$color)
-    print(abun_plot_obj())
+    plotly::ggplotly(abun_plot_obj())
   })
   
   output$abun_summary <- renderPrint({
@@ -705,12 +705,12 @@ shinyServer(function(input, output, session) {
   })
   
   even_plot_obj <- reactive({
-    plot(even(), x_axis=input$xaxis, color=input$color)
+    plot(even(), x_axis=input$xaxis, color=input$color, scales = 'free')#ggplotly bugs without free scale
   })
   # Show evenness plot
-  output$even_plot <- renderPlot({
+  output$even_plot <- renderPlotly({
     #plot(even(), x_axis=input$xaxis, color=input$color)
-    print(even_plot_obj())
+    plotly::ggplotly(even_plot_obj())
   })
   
   output$even_summary <- renderPrint({
@@ -732,9 +732,9 @@ shinyServer(function(input, output, session) {
     plot(effsp(), x_axis=input$xaxis, color=input$color)
   })
   # Show evenness plot
-  output$effsp_plot <- renderPlot({
+  output$effsp_plot <- renderPlotly({
     #plot(effsp(), x_axis=input$xaxis, color=input$color)
-    print(effsp_plot_obj())
+    plotly::ggplotly(effsp_plot_obj())
   })
   
   output$effsp_summary <- renderPrint({
