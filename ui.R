@@ -226,7 +226,10 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
                    plotlyOutput("outlier_richness_plot", height = 300)
             )
                    
-            )
+            ),
+          fluidRow(
+            column(width = 12, tableOutput("audies"))
+          )
    ),
  
   tabPanel("Normalization",

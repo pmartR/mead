@@ -335,6 +335,10 @@ shinyServer(function(input, output, session) {
     input$sample_reset_button
     input$otu_filter_go
     input$otu_reset_button
+    if(input$remove_outliers > 1) {
+      outlier_filter <- pmartRseq::sample_based_filter(omicsData = filter)
+      filtered_rRNA_obj <- 
+    }
     # observe({
     #   filtered_rRNA_obj
     ################# JSON object for Meg #################
@@ -449,7 +453,9 @@ shinyServer(function(input, output, session) {
   
   outlier_jaccard <- reactive({
     #TODO: force the user to select a grouping before this will display
-    pmartRseq::jaccard_calc(omicsData = groupDF())
+    jaqs <- pmartRseq::jaccard_calc(omicsData = groupDF())
+    jaqs$jaqsID <- jaqs[, attr(jaqs,"cname")$fdata_cname]
+    return(jaqs)
   })
   
   jac_plot_obj <- reactive({
@@ -459,16 +465,26 @@ shinyServer(function(input, output, session) {
   
   output$outlier_jaccard_plot <- renderPlotly({
     d <- event_data("plotly_selected")
-    p <- plotly::plot_ly(data = data.frame(outlier_jaccard()),
-                         x = ~quote(attr(outlier_jaccard(), "cname")$fdata_cname),
+    p <- plotly::plot_ly(data = outlier_jaccard(),
+                         x = ~jaqsID,
                          y = ~Average) %>%
-      add_markers(key = ~eval(quote(attr(outlier_jaccard(), "cname")$fdata_cname)), color = I("black"))
+      add_markers(key = ~jaqsID, color = I("black"))
     if (!is.null(d)) {
-      m <- outlier_jaccard()[outlier_jaccard()[,eval(quote(attr(outlier_jaccard(),"cname")$fdata_cname))] %in% d[["key"]][[1]], ]
+      m <- outlier_jaccard()[outlier_jaccard()$jaqsID %in% d[["key"]], ]
       p <- add_markers(p, data = m, color = I("red"))
     }
     layout(p, dragmode = "lasso", showlegend = FALSE)
   })
+  
+  selected_outliers <- reactive({
+    event_data("plotly_selected")
+  })
+  
+  output$audies <- renderTable({
+    outlier_jaccard()[outlier_jaccard()$jaqsID %in% selected_outliers()[["key"]], ]
+  })
+  
+  
   
   abundance <- reactive({
     abundances <- abundance_calc(omicsData = groupDF())
