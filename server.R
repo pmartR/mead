@@ -335,10 +335,7 @@ shinyServer(function(input, output, session) {
     input$sample_reset_button
     input$otu_filter_go
     input$otu_reset_button
-    if(input$remove_outliers > 1) {
-      outlier_filter <- pmartRseq::sample_based_filter(omicsData = filter)
-      filtered_rRNA_obj <- 
-    }
+
     # observe({
     #   filtered_rRNA_obj
     ################# JSON object for Meg #################
