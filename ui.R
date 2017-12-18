@@ -227,8 +227,10 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
             )
                    
             ),
+          br(),
           fluidRow(
-            column(width = 12, tableOutput("audies"))
+            column(width = 6, tableOutput("audies")),
+            column(width = 6, actionButton("remove_outliers", label = "Remove Outliers"))
           )
    ),
  

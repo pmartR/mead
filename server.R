@@ -16,7 +16,7 @@ shinyServer(function(input, output, session) {
   #---------- listen for session reset -------#
   observeEvent(input$reset_button, {js$reset()}) 
   #---------- rRNA object import -------------#
-  rRNAobj <- reactive({
+  importObj <- reactive({
     validate(
       need(input$biom != "", "Please select a biom file")
     )
@@ -27,11 +27,34 @@ shinyServer(function(input, output, session) {
     validate(
       need(input$qiime != "", "Please select a qiime file")
     )
-    return(pmartRseq::as.seqData(e_data = as.character(input$biom$datapath), f_data = as.character(input$qiime$datapath), edata_cname = "OTU", data_type = "rRNA", taxa_cname = "taxonomy2"))
-  }) #end rRNAobj
+    # check for e_meta file
+    if (is.null(input$e_meta$name)) {
+      return(pmartRseq::import_seqData(e_data_filepath = as.character(input$biom$datapath),
+                                       f_data_filepath = as.character(input$qiime$datapath),
+             e_meta_filepath = NULL))
+    }
+    # import e_meta if there is one
+    if (!is.null(input$e_meta$name)) {
+      return(pmartRseq::import_seqData(e_data_filepath = as.character(input$biom$datapath),
+                                       f_data_filepath = as.character(input$qiime$datapath),
+                                       e_meta_filepath = as.character(input$e_meta$datapath)))
+    }
+  }) #end rRNAobj import
   
+  rRNAobj <- reactive({
+    validate(
+      need(importObj, message = "Please upload data files to begin analysis")
+    )
+    return(pmartRseq::as.seqData(e_data = importObj()$e_data,
+                                 f_data = importObj()$f_data,
+                                 e_meta = importObj()$e_meta,
+                                 fdata_cname = importObj()$guessed_fdata_cname,
+                                 edata_cname = importObj()$guessed_edata_cname,
+                                 data_type = "rRNA", taxa_cname = "taxonomy2"))
+    
+  })
   #-------- filter history support -----------#
-  filters <- reactiveValues(otu = list(), sample = list(), metadata = list())
+  filters <- reactiveValues(otu = list(), sample = list(), metadata = list(), outlier = list())
   
   #--------- kovera observer ---------#
   observeEvent(input$otu_filter_go,{
@@ -335,6 +358,9 @@ shinyServer(function(input, output, session) {
     input$sample_reset_button
     input$otu_filter_go
     input$otu_reset_button
+    input$remove_outliers
+    print("removing outliers")
+    print(filtered_rRNA_obj$e_data)
 
     # observe({
     #   filtered_rRNA_obj
@@ -447,8 +473,8 @@ shinyServer(function(input, output, session) {
   output$group_tab <- DT::renderDataTable(group_freq_tab())
   
   # ################ Outliers Tab #################
-  
   outlier_jaccard <- reactive({
+    input$remove_outliers
     #TODO: force the user to select a grouping before this will display
     jaqs <- pmartRseq::jaccard_calc(omicsData = groupDF())
     jaqs$jaqsID <- jaqs[, attr(jaqs,"cname")$fdata_cname]
@@ -484,6 +510,7 @@ shinyServer(function(input, output, session) {
   
   
   abundance <- reactive({
+    input$remove_outliers
     abundances <- abundance_calc(omicsData = groupDF())
     abundances$abundID <- rownames(abundances)
     return(abundances)
@@ -516,6 +543,23 @@ shinyServer(function(input, output, session) {
     }
     layout(p, dragmode = "lasso", showlegend = FALSE)
   })
+  
+  outlier_filter_obj <- reactive({
+    validate(
+      need(length(filtered_rRNA_obj) > 0 , message = "Upload data first"),
+      need(!is.null(groupDF()), message = "Need group designation first")
+    )
+    return(pmartRseq::sample_based_filter(omicsData = filtered_rRNA_obj, fn = "criteria"))
+  })
+  
+  #--------- outlier observer ---------#
+  observeEvent(input$remove_outliers,{
+    filters$outliers[[input$remove_outliers]] <- otu_filter_obj()
+    filtO <- pmartRseq::applyFilt(omicsData = filtered_rRNA_obj, outlier_filter_obj(), samps_to_remove =  outlier_jaccard()[outlier_jaccard()$jaqsID %in% selected_outliers()[["key"]], "jaqsID"])
+    filtered_rRNA_obj <<- filtO
+  })
+  
+  
   # ################ Normalization Tab #################
   
   # Select which normalization function to use
