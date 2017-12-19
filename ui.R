@@ -370,6 +370,55 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
           plotOutput("pa_flag_plot")
  ),
  
+ tabPanel("Network Analysis",
+          h3("Parameters"),
+          fluidRow(
+            column(width=4, uiOutput("na_group")),
+            column(width=4, uiOutput("na_size")),
+            column(width=4, uiOutput("na_colour"))
+          ),
+          fluidRow(
+            column(width=4, uiOutput("na_group_var")),
+            column(width=4, uiOutput("na_coeff"))
+          ),
+          fluidRow(
+            column(width=4, uiOutput("na_missingval")),
+            column(width=4, uiOutput("na_qval"))
+          ),
+          # uiOutput("na_group"),
+          # uiOutput("na_group_var"),
+          # uiOutput("na_missingval"),
+          # uiOutput("na_coeff"),
+          # uiOutput("na_qval"),
+          #uiOutput("na_colour"),
+          # uiOutput("na_size"),
+          actionButton(
+            inputId = "submit_na",
+            label = "Submit"
+          ),
+          plotOutput("na_network_plot"),
+          br(),
+          hr(),
+          h3("Modules"),
+          uiOutput("na_cluster"),
+          uiOutput("na_mod_size"),
+          actionButton(
+            inputId = "submit_modules",
+            label = "Submit Module Detection"
+          ),
+          plotOutput("na_mod_plot"),
+          br(),
+          hr(),
+          h3("Environmental Variables"),
+          uiOutput("na_envvars"),
+          uiOutput("env_pval"),
+          actionButton(
+            inputId = "submit_envvars",
+            label = "Submit Environmental Variables"
+          ),
+          plotOutput("na_envvars_plot")
+          ),
+ 
  tabPanel("Download",
           uiOutput("files_to_download"),
           downloadButton("downloadData","Download")

@@ -359,8 +359,8 @@ shinyServer(function(input, output, session) {
     input$otu_filter_go
     input$otu_reset_button
     input$remove_outliers
-    print("removing outliers")
-    print(filtered_rRNA_obj$e_data)
+    # print("removing outliers")
+    # print(filtered_rRNA_obj$e_data)
 
     # observe({
     #   filtered_rRNA_obj
@@ -372,7 +372,6 @@ shinyServer(function(input, output, session) {
   })
   
   
-  # ################ Group Designation Tab #################
   
   output$summ_filt <- renderPrint({
     validate(
@@ -388,6 +387,7 @@ shinyServer(function(input, output, session) {
     nrow(filtered_data()$e_data)
   })
   
+  # ################ Group Designation Tab #################
   
   group_vars <- reactive({
     intersect(which(lapply(apply(filtered_data()$f_data, 2, function(z) table(z))[unlist(lapply(apply(filtered_data()$f_data, 2, function(x) table(x)), function(y) any(is.finite(y))))], function(w) max(w)) > 2), which(apply(filtered_data()$f_data, 2, function(v) length(unique(v))) >= 2))
@@ -1285,6 +1285,216 @@ shinyServer(function(input, output, session) {
     })
 
   }, autoDestroy = FALSE)
+  
+  ################ Network Analysis Tab #################
+  #----------- network ----------#
+  
+  # # Select which variables to use as main effects
+  # output$na_corrtype <- renderUI({
+  #   selectInput("na_corrtype",
+  #               label = "Correlation function to use for network",
+  #               choices = c("spearman","pearson"),
+  #               selected = "spearman",
+  #               multiple = FALSE)
+  # })
+  
+  # Select if should run network analysis in groups
+  output$na_group <- renderUI({
+    checkboxInput("na_group",
+                  label = "Run separate networks for each group?",
+                  value = FALSE)
+  })
+  
+  # Select which variable to use for grouping
+  output$na_group_var <- renderUI({
+    selectInput("na_group_var",
+                label = "Which variable to use for grouping",
+                choices = c("NA",colnames(normalized_data()$f_data)[group_vars()]),
+                selected = "NA",
+                multiple = FALSE)
+  })
+  
+  # Select if should use 0 or NA for missing values
+  output$na_missingval <- renderUI({
+    selectInput("na_missingval",
+                  label = "Which to use for 'missing' values",
+                  choices = c("NA",0),
+                  selected = 0,
+                  multiple = FALSE)
+  })
+  
+  # igraph corr coeff cutoff
+  output$na_coeff <- renderUI({
+    sliderInput("na_coeff",
+                label = "Absolute value of correlation coefficient must be higher than this value to be included in plot",
+                min = 0,
+                max = 1,
+                step = 0.01,
+                value = 0.3)
+  })
+  
+  # # igraph corr coeff cutoff
+  # output$na_pval <- renderUI({
+  #   sliderInput("na_pval",
+  #               label = "Correlation pvalue must be lower than this value to be included in plot",
+  #               min = 0,
+  #               max = 1,
+  #               step = 0.01,
+  #               value = 0.05)
+  # })
+  
+  # igraph corr coeff cutoff
+  output$na_qval <- renderUI({
+    sliderInput("na_qval",
+                label = "Correlation qvalue must be lower than this value to be included in plot",
+                min = 0,
+                max = 1,
+                step = 0.01,
+                value = 0.05)
+  })
+  
+  # colour of vertices in graph
+  output$na_colour <- renderUI({
+    selectInput("na_colour",
+                label = "Which variable to use for vertex colour",
+                choices = c("NA",colnames(normalized_data()$e_meta)),
+                selected = "NA")
+  })
+  
+  # Select if should scale vertex size by abundance
+  output$na_size <- renderUI({
+    checkboxInput("na_size",
+                  label = "Scale vertex size by abundance?",
+                  value = FALSE)
+  })
+  
+  # Select module algorithm to use
+  output$na_cluster <- renderUI({
+    selectInput("na_cluster",
+                label = "Which clustering method to use",
+                choices = c("edge_betweenness", "fast_greedy", "infomap", "label_prop", "leading_eigen", "louvain", "optimal", "spinglass", "walktrap"),
+                selected = "louvain")
+  })
+  
+  # Select min module size
+  output$na_mod_size <- renderUI({
+    numericInput("na_mod_size",
+                 label = "Modules must have a minimum of this many features, otherwise will be grouped into 'non-modular'",
+                 value = 5)
+  })
+  
+  # Select environmental variables to correlate to modules
+  output$na_envvars <- renderUI({
+    selectInput("na_envvars",
+                label = "Which environmental variables to correlate to modules?",
+                choices = c("NA",colnames(normalized_data()$f_data)),
+                selected = "NA",
+                multiple = TRUE)
+  })
+  
+  # Select module envvars correlation p-value
+  output$env_pval <- renderUI({
+    sliderInput("env_pval",
+                label = "Highlight p-values lower than this value in plot",
+                min = 0,
+                max = 1,
+                step = 0.01,
+                value = 0.05)
+  })
+  
+  
+  observeEvent(input$submit_na, {
+    
+    # Perform differential abundance analysis
+    na_network <<- reactive({
+      validate(need(length(input$na_missingval) == 1, "Need to specify what value to use for missing values"))
+      #validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
+      
+      if(!input$na_group){
+        na_group_var <- NULL
+        na_group <- FALSE
+      }else{
+        na_group <- TRUE
+        if(input$na_group_var == "NA"){
+          na_group_var <- NULL
+        }else{
+          na_group_var <- input$na_group_var
+        }
+      }
+      
+      return(pmartRseq::network_calc(omicsData = normalized_data(), type="spearman", group=na_group, group_var=na_group_var, fdr_method="fndr", missing_val=input$na_missingval))
+    })
+    
+    na_igraph <<- reactive({
+      validate(need(length(input$na_missingval) == 1, "Need to specify what value to use for missing values"))
+      
+      return(pmartRseq::pmartRseq_igraph(netData = na_network(), coeff = input$na_coeff, qval = input$na_qval, pval = NULL))
+    })
+    
+    na_network_plot <<- reactive({
+      
+      if(input$na_colour != "NA"){
+        na_colour <- input$na_colour
+      }else{
+        na_colour <- NULL
+      }
+      return(pmartRseq::network_plot(netGraph=na_igraph(), omicsData=normalized_data(), modData=NULL, colour=na_colour, vsize=input$na_size, legend.show=TRUE, legend.pos="bottomleft"))
+    })
+    
+    # Network Plot
+    output$na_network_plot <- renderPlot({
+      #plot(diffabun_res(), type = "logfc")
+      print(na_network_plot())
+    })
+  }, autoDestroy = FALSE)
+    
+  observeEvent(input$submit_modules, {
+    # Network indices
+    na_net_indc <<- reactive({
+      validate(need(exists(na_igraph()), "network graph object must be created first"))
+      
+      return(pmartRseq::network_indices(netGraph = na_igraph()))
+    })
+    
+    # Modules
+    na_mods <<- reactive({
+      validate(need(length(input$na_cluster) == 1, "Need to specify a clustering algorithm to use"))
+      validate(need(length(input$na_mod_size) == 1, "Need to specify a minimum module size"))
+      
+      return(pmartRseq::detect_modules(netGraph = na_igraph(), cluster = input$na_cluster, cutoff = input$na_mod_size))
+    })
+    
+    na_env <<- reactive({
+      validate(need(length(input$na_envvars) >= 1, "Need to specify environmental variables"))
+      
+      return(pmartRseq::mod_env(omicsData = normalized_data(), modData = na_mods(), envVars = input$na_envvars, pca.method="svd", cor.method="spearman", use="pairwise", padjust="BH"))
+    })
+    
+    mod_plot <<- reactive({
+      validate(need(length(input$na_size) == 1, "Need to specify vertex size"))
+      
+      return(pmartRseq::network_plot(netGraph = na_igraph(), omicsData = normalized_data(), modData = na_mods(), colour = "Module", vsize = input$na_size, legend.show=TRUE, legend.pos = "bottomleft"))
+    })
+    
+    output$na_mod_plot <- renderPlot({
+      print(mod_plot())
+    })
+  },autoDestroy = FALSE)
+  
+  observeEvent(input$submit_envvars, {
+    mod_env_plot <<- reactive({
+      validate(need(length(input$env_pval) == 1, "Need to specify a p-value cutoff for module and environmental variable correlations"))
+      
+      return(plot(na_env(), pval.thresh=input$env_pval))
+    })
+    
+    # EnvVars Plot
+    output$na_envvars_plot <- renderPlot({
+      #plot(diffabun_res(), type = "logfc")
+      print(mod_env_plot())
+    })
+    
+  },autoDestroy = FALSE)
   
   ################ Download Tab #################
   output$files_to_download <- renderUI({
