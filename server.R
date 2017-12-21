@@ -10,6 +10,8 @@
 
 #Sys.setenv(R_ZIPCMD="/usr/bin/zip")
 
+options(shiny.maxRequestSize=30*1024^2)
+
 filtered_rRNA_obj <- list()
 
 shinyServer(function(input, output, session) {
@@ -17,42 +19,164 @@ shinyServer(function(input, output, session) {
   observeEvent(input$reset_button, {js$reset()}) 
   #---------- rRNA object import -------------#
   importObj <- reactive({
+    # validate(
+    #   need(input$biom != "", "Please select a biom file")
+    # )
     validate(
-      need(input$biom != "", "Please select a biom file")
+      need(grepl(".biom", as.character(input$e_data$name)) | grepl(".csv", as.character(input$e_data$name)), "Data file must be in .biom or .csv format")
     )
+    
+    # validate(
+    #   need(input$qiime != "", "Please select a qiime file")
+    # )
+    
     validate(
-      need(grepl(".biom", as.character(input$biom$name)), "Biom file must be in .biom format")
+      need(input$e_data != "", "Please select a data file")
     )
     
     validate(
-      need(input$qiime != "", "Please select a qiime file")
+      need(input$f_data != "", "Please select a sample metadata file")
     )
     # check for e_meta file
     if (is.null(input$e_meta$name)) {
-      return(pmartRseq::import_seqData(e_data_filepath = as.character(input$biom$datapath),
-                                       f_data_filepath = as.character(input$qiime$datapath),
+      return(pmartRseq::import_seqData(e_data_filepath = as.character(input$e_data$datapath),
+                                       f_data_filepath = as.character(input$f_data$datapath),
              e_meta_filepath = NULL))
     }
     # import e_meta if there is one
     if (!is.null(input$e_meta$name)) {
-      return(pmartRseq::import_seqData(e_data_filepath = as.character(input$biom$datapath),
-                                       f_data_filepath = as.character(input$qiime$datapath),
+      return(pmartRseq::import_seqData(e_data_filepath = as.character(input$e_data$datapath),
+                                       f_data_filepath = as.character(input$f_data$datapath),
                                        e_meta_filepath = as.character(input$e_meta$datapath)))
     }
   }) #end rRNAobj import
   
-  rRNAobj <- reactive({
-    validate(
-      need(importObj, message = "Please upload data files to begin analysis")
-    )
-    return(pmartRseq::as.seqData(e_data = importObj()$e_data,
-                                 f_data = importObj()$f_data,
-                                 e_meta = importObj()$e_meta,
-                                 fdata_cname = importObj()$guessed_fdata_cname,
-                                 edata_cname = importObj()$guessed_edata_cname,
-                                 data_type = "rRNA", taxa_cname = "taxonomy2"))
+  # output$edata_cname <- renderUI({
+  #   selectInput("edata_cname",
+  #               label = "Identifier column name in data",
+  #               choices = colnames(importObj()$e_data),
+  #               selected = importObj()$guessed_edata_cname,
+  #               multiple = FALSE)
+  # })
+  # 
+  # output$fdata_cname <- renderUI({
+  #   selectInput("fdata_cname",
+  #               label = "Sample column name in sample metadata",
+  #               choices = colnames(importObj()$f_data),
+  #               selected = importObj()$guessed_fdata_cname,
+  #               multiple = FALSE)
+  # })
+  # 
+  # output$taxa_cname <- renderUI({
+  #   selectInput("taxa_cname",
+  #               label = "Taxonomic column of interest in feature metadata",
+  #               choices = colnames(importObj()$e_meta),
+  #               selected = importObj()$guessed_taxa_cname,
+  #               multiple = FALSE)
+  # })
+  
+  #rRNAobj <- reactive({ return(importObj()) })
+  
+  #observeEvent(input$Upload,{
+  
+    rRNAobj <- reactive({
+      validate(
+        need(importObj, message = "Please upload data files to begin analysis")
+      )
+      return(pmartRseq::as.seqData(e_data = importObj()$e_data,
+                                   f_data = importObj()$f_data,
+                                   e_meta = importObj()$e_meta,
+                                   fdata_cname = importObj()$guessed_fdata_cname,
+                                   edata_cname = importObj()$guessed_edata_cname,
+                                   taxa_cname = importObj()$guessed_taxa_cname,
+                                   data_type = "rRNA"))
+      
+    })
     
-  })
+    output$sample_data <- DT::renderDataTable(expr = 
+                                                data.frame(rRNAobj()$e_data), rownames = FALSE, class = 'cell-border stripe compact hover',
+                                              options = list(columnDefs = list(list(
+                                                targets = c(1:(ncol((rRNAobj()$e_data)) - 1)),
+                                                render = JS(
+                                                  "function(data, type, row, meta) {",
+                                                  "return type === 'display' && data.length > 10 ?",
+                                                  "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
+                                                  "}")
+                                              ))), callback = JS('table.page(3).draw(false);'))
+    
+    # ################ Group Designation Tab #################
+    
+    group_vars <- reactive({
+      intersect(which(lapply(apply(rRNAobj()$f_data, 2, function(z) table(z))[unlist(lapply(apply(rRNAobj()$f_data, 2, function(x) table(x)), function(y) any(is.finite(y))))], function(w) max(w)) > 2), which(apply(rRNAobj()$f_data, 2, function(v) length(unique(v))) >= 2))
+      
+    })
+    
+    output$gdfMainEffect <- renderUI({
+      selectInput("gdfMainEffect",
+                  label = "Main Effect(s) to use for Groupings",
+                  choices = colnames(rRNAobj()$f_data)[group_vars()],
+                  multiple = TRUE)
+    })
+    
+    # output$covs <- renderUI({
+    #   checkboxInput("covs",
+    #                 label = "Any covariates?")
+    # })
+    # input$cov1 <- NA
+    # input$cov2 <- NA
+    #observeEvent(input$covs, {
+    #   output$cov1 <- renderUI({
+    #     selectInput("cov1",
+    #                 label = "Covariate 1",
+    #                 choices = c("NA",colnames(rRNAobj()$f_data)),
+    #                 selected = NULL)
+    #   })
+    #   
+    #   output$cov2 <- renderUI({
+    #     selectInput("cov2",
+    #                 label = "Covariate 2",
+    #                 choices = c("NA",colnames(rRNAobj()$f_data)),
+    #                 selected = NULL)
+    #     #groupDesignation
+    #   })
+    # #})
+    
+    
+    # Create groups with main effects
+    groupDF <<- reactive({
+      mainEffects <- input$gdfMainEffect
+      # if(!is.na(input$cov1) | !is.na(input$cov2)){
+      #   covariates <- c(input$cov1, input$cov2)
+      #   if(any(is.na(covariates))){
+      #     covariates <- covariates[!is.na(covariates)]
+      #   }
+      # }
+      validate(
+        need(length(mainEffects) > 0, "There needs to be at least one grouping variable")
+      )
+      
+      return(pmartRseq::group_designation(rRNAobj(), main_effects = mainEffects))
+      
+    })
+    
+    # Show the groupings data frame
+    #observeEvent(input$groupDF_go,
+    group_df_tab <- reactive({
+      attr(groupDF(), "group_DF")
+    })
+    output$group_DF <- DT::renderDataTable(group_df_tab())
+    #)
+    
+    # Also output a table showing the number of reps in each group
+    group_freq_tab <- reactive({
+      as.data.frame(table(attr(groupDF(),"group_DF")$Group))
+    })
+    output$group_tab <- DT::renderDataTable(group_freq_tab())
+    
+  #})
+  
+  # ################ Filtering Tab #################
+  
   #-------- filter history support -----------#
   filters <- reactiveValues(otu = list(), sample = list(), metadata = list(), outlier = list())
   
@@ -74,8 +198,8 @@ shinyServer(function(input, output, session) {
   #--------- filter application observer ---------#
   filtered_rRNA_obj <- NULL
   #filt1 <- NULL
-  observeEvent(rRNAobj(), {
-      filtered_rRNA_obj <<- rRNAobj()
+  observeEvent(groupDF(), {
+      filtered_rRNA_obj <<- groupDF()
   }, priority = 10)
   
   #--------- apply filter applications on click ---------#
@@ -141,7 +265,7 @@ shinyServer(function(input, output, session) {
       numericInputRow("filter_kOverA_sample_threshold", "",
                       min = 1, max = maxSamples(), value = kovera_k, step = 1)
     })
-    filt1 <- rRNAobj()
+    filt1 <- groupDF()
     # no sample filter yet
     if (input$sample_filter_go == 0) {
       filtered_rRNA_obj <<- filt1
@@ -163,13 +287,13 @@ shinyServer(function(input, output, session) {
     updateNumericInput(session, "n",
                        value = 0)
     if (input$otu_filter_go == 0) {
-      filt1 <- rRNAobj()
+      filt1 <- groupDF()
     } 
     if (input$otu_filter_go != 0) {
       # apply k over a filter
       isolate({
         filt1 <- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
-                                      omicsData = rRNAobj(),
+                                      omicsData = groupDF(),
                                       num_samps = input$filter_kOverA_sample_threshold,
                                       upper_lim = input$filter_kOverA_count_threshold)  
       })
@@ -184,7 +308,7 @@ shinyServer(function(input, output, session) {
   metadata_obj <- reactive({
     #------- TODO: need to display an error if the rRNA object isn't created! ---------#
     validate(
-      need(!(is.null(rRNAobj()$f_data)), message = "rRNA object fail. Check to make sure file paths are correct")
+      need(!(is.null(groupDF()$f_data)), message = "rRNA object fail. Check to make sure file paths are correct")
     )
     input$metadata_filter_go
     input$metadata_reset_button
@@ -192,7 +316,7 @@ shinyServer(function(input, output, session) {
     input$sample_reset_button
     input$otu_filter_go
     input$otu_reset_button
-    if (is.null(input$qiime)) {
+    if (is.null(input$f_data)) {
       return(NULL)
     }else{
       temp <- filtered_rRNA_obj$f_data
@@ -218,11 +342,11 @@ shinyServer(function(input, output, session) {
   #---- Charts for f_meta filtering -------#
   # 
   sample_metadata_filter_obj <- reactive({
-    return(pmartRseq::sample_based_filter(omicsData = rRNAobj(), fn = "criteria"))
+    return(pmartRseq::sample_based_filter(omicsData = groupDF(), fn = "criteria"))
   })
   observeEvent(input$metadata_reset_button, {
     output$sample_metadata <- DT::renderDataTable(
-      rRNAobj()$f_data, rownames = FALSE, class = 'cell-border stripe compact hover',
+      groupDF()$f_data, rownames = FALSE, class = 'cell-border stripe compact hover',
       options = list(columnDefs = list(list(
         targets = c(1:(ncol((metadata_obj())) - 1)),
         render = JS(
@@ -232,10 +356,10 @@ shinyServer(function(input, output, session) {
           "}")
       ))), callback = JS('table.page(3).draw(false);'))  })
   
-  observeEvent(rRNAobj(), {
+  observeEvent(groupDF(), {
     # If the metadata has been loaded, create the charts
     output$plots <- renderUI({get_plot_output_list(metadata_obj())})
-    output$boxes <- renderUI({get_checkbox_output_list(rRNAobj()$f_data)})
+    output$boxes <- renderUI({get_checkbox_output_list(groupDF()$f_data)})
     # Initialize new_metadata_obj object. If no metadata filtering then it's a copy of metadata_obj.
     # If metadata filtering, will be overwritten with filters 
     
@@ -287,7 +411,7 @@ shinyServer(function(input, output, session) {
   # end sample metadata filtering
   #--------------- k over a filtering  -----------------#
   kovera_k <- 1
-  observeEvent(rRNAobj(), {
+  observeEvent(groupDF(), {
     maxSamples = reactive({
       # Create logical indicating the samples to keep, or dummy logical if nonsense input
       validate(
@@ -311,7 +435,7 @@ shinyServer(function(input, output, session) {
     validate(
       need(length(filtered_rRNA_obj) > 0 , message = "Upload data first")
     )
-    return(pmartRseq::count_based_filter(rRNAobj(), fn = "ka"))
+    return(pmartRseq::count_based_filter(groupDF(), fn = "ka"))
   })
   
   output$read_counts_plot <- renderPlot({
@@ -332,7 +456,7 @@ shinyServer(function(input, output, session) {
   #-------------- Library read filtering -----------#
   
   sample_filter_obj <- reactive({
-    return(pmartRseq::sample_based_filter(omicsData = rRNAobj(), fn = "sum"))
+    return(pmartRseq::sample_based_filter(omicsData = groupDF(), fn = "sum"))
   })
   
   
@@ -387,96 +511,13 @@ shinyServer(function(input, output, session) {
     nrow(filtered_data()$e_data)
   })
   
-  # ################ Group Designation Tab #################
-  
-  group_vars <- reactive({
-    intersect(which(lapply(apply(filtered_data()$f_data, 2, function(z) table(z))[unlist(lapply(apply(filtered_data()$f_data, 2, function(x) table(x)), function(y) any(is.finite(y))))], function(w) max(w)) > 2), which(apply(filtered_data()$f_data, 2, function(v) length(unique(v))) >= 2))
-    
-  })
-  
-  output$gdfMainEffect <- renderUI({
-    selectInput("gdfMainEffect",
-                label = "Main Effect(s) to use for Groupings",
-                choices = colnames(filtered_data()$f_data)[group_vars()],
-                multiple = TRUE)
-  })
-  
-  # # Input main effects used for groupings
-  # output$group1 <- renderUI({
-  #   selectInput("group1",
-  #               label = "Main Effect 1",
-  #               choices = colnames(filtered_data()$f_data)[group_vars()])
-  # })
-  # 
-  # # Can have up to 2 main effects
-  # output$group2 <- renderUI({
-  #   selectInput("group2",
-  #               label = "Main Effect 2",
-  #               choices = c("NA",colnames(filtered_data()$f_data)[group_vars()]),
-  #               selected = NULL)
-  #   #groupDesignation
-  # })
-  
-  # output$covs <- renderUI({
-  #   checkboxInput("covs",
-  #                 label = "Any covariates?")
-  # })
-  # input$cov1 <- NA
-  # input$cov2 <- NA
-  #observeEvent(input$covs, {
-  #   output$cov1 <- renderUI({
-  #     selectInput("cov1",
-  #                 label = "Covariate 1",
-  #                 choices = c("NA",colnames(filtered_data()$f_data)),
-  #                 selected = NULL)
-  #   })
-  #   
-  #   output$cov2 <- renderUI({
-  #     selectInput("cov2",
-  #                 label = "Covariate 2",
-  #                 choices = c("NA",colnames(filtered_data()$f_data)),
-  #                 selected = NULL)
-  #     #groupDesignation
-  #   })
-  # #})
-  
-  
-  # Create groups with main effects
-  groupDF <- reactive({
-      mainEffects <- input$gdfMainEffect
-    # if(!is.na(input$cov1) | !is.na(input$cov2)){
-    #   covariates <- c(input$cov1, input$cov2)
-    #   if(any(is.na(covariates))){
-    #     covariates <- covariates[!is.na(covariates)]
-    #   }
-    # }
-    validate(
-      need(length(mainEffects) > 0, "There needs to be at least one grouping variable")
-    )
-    
-    return(pmartRseq::group_designation(filtered_data(), main_effects = mainEffects))
-    
-  })
-  
-  # Show the groupings data frame
-  #observeEvent(input$groupDF_go,
-  group_df_tab <- reactive({
-    attr(groupDF(), "group_DF")
-  })
-  output$group_DF <- DT::renderDataTable(group_df_tab())
-  #)
 
-  # Also output a table showing the number of reps in each group
-  group_freq_tab <- reactive({
-    as.data.frame(table(attr(groupDF(),"group_DF")$Group))
-  })
-  output$group_tab <- DT::renderDataTable(group_freq_tab())
   
   # ################ Outliers Tab #################
   outlier_jaccard <- reactive({
     input$remove_outliers
     #TODO: force the user to select a grouping before this will display
-    jaqs <- pmartRseq::jaccard_calc(omicsData = groupDF())
+    jaqs <- pmartRseq::jaccard_calc(omicsData = filtered_data())
     jaqs$jaqsID <- jaqs[, attr(jaqs,"cname")$fdata_cname]
     return(jaqs)
   })
@@ -511,7 +552,7 @@ shinyServer(function(input, output, session) {
   
   abundance <- reactive({
     input$remove_outliers
-    abundances <- abundance_calc(omicsData = groupDF())
+    abundances <- abundance_calc(omicsData = filtered_data())
     abundances$abundID <- rownames(abundances)
     return(abundances)
   })
@@ -575,7 +616,7 @@ shinyServer(function(input, output, session) {
     validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
     validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css","none"), "Normalization function must be one of the options specified."))
     
-    return(pmartRseq::split_emeta(pmartRseq::normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=TRUE), cname="OTU", split1=NULL, numcol=7, split2="__", num=2, newnames=NULL))
+    return(pmartRseq::split_emeta(pmartRseq::normalize_data(omicsData=filtered_data(), norm_fn=input$normFunc, normalize=TRUE), cname="OTU", split1=NULL, numcol=7, split2="__", num=2, newnames=NULL))
   })
   
   # Look at normalized results
@@ -604,7 +645,7 @@ shinyServer(function(input, output, session) {
   
   # Calculate abundance on raw data
   abun_raw <- reactive({
-    return(suppressWarnings(pmartRseq::abundance_calc(groupDF())))
+    return(suppressWarnings(pmartRseq::abundance_calc(filtered_data())))
   })
   
   # Calculate richness on normalized data
@@ -614,7 +655,7 @@ shinyServer(function(input, output, session) {
   
   # Calculate richness on raw data
   rich_raw <- reactive({
-    return(suppressWarnings(pmartRseq::richness_calc(groupDF(), index="observed")))
+    return(suppressWarnings(pmartRseq::richness_calc(filtered_data(), index="observed")))
   })
   
   ra_raw_plot <- reactive({
@@ -641,7 +682,7 @@ shinyServer(function(input, output, session) {
   output$xaxis <- renderUI({
     selectInput("xaxis",
                 label = "x-axis",
-                choices = c(colnames(attr(groupDF(),"group_DF"))),
+                choices = c(colnames(attr(normalized_data(),"group_DF"))),
                 selected = "Group")
   })
   
@@ -649,7 +690,7 @@ shinyServer(function(input, output, session) {
   output$color <- renderUI({
     selectInput("color",
                 label = "color",
-                choices = c(colnames(attr(groupDF(),"group_DF"))),
+                choices = c(colnames(attr(normalized_data(),"group_DF"))),
                 selected = "Group")
   })
   
@@ -669,7 +710,7 @@ shinyServer(function(input, output, session) {
       need(length(input$adiv_index) > 0, "There needs to be at least one alpha diversity index")
     )
     
-    return(pmartRseq::alphaDiv_calc(groupDF(), index=input$adiv_index))
+    return(pmartRseq::alphaDiv_calc(normalized_data(), index=input$adiv_index))
   })
   
   adiv_plot_obj <- reactive({
@@ -702,7 +743,7 @@ shinyServer(function(input, output, session) {
       need(length(input$rich_index) > 0, "There needs to be at least one richness index")
     )
     
-    return(pmartRseq::richness_calc(groupDF(), index=input$rich_index))
+    return(pmartRseq::richness_calc(filtered_data(), index=input$rich_index))
   })
   
   rich_plot_obj <- reactive({
@@ -726,7 +767,7 @@ shinyServer(function(input, output, session) {
       need(length(input$xaxis) > 0, "Must include a valid x-axis for the plot.")
     )
     
-    return(pmartRseq::abundance_calc(groupDF()))
+    return(pmartRseq::abundance_calc(normalized_data()))
   })
   
   abun_plot_obj <- reactive({
@@ -758,7 +799,7 @@ shinyServer(function(input, output, session) {
       need(length(input$even_index) > 0, "There needs to be at least one evenness index")
     )
     
-    return(pmartRseq::evenness_calc(groupDF(), index=input$even_index))
+    return(pmartRseq::evenness_calc(normalized_data(), index=input$even_index))
   })
   
   even_plot_obj <- reactive({
@@ -782,7 +823,7 @@ shinyServer(function(input, output, session) {
       need(length(input$xaxis) > 0, "Must include a valid x-axis for the plot.")
     )
     
-    return(pmartRseq::effsp_calc(groupDF()))
+    return(pmartRseq::effsp_calc(normalized_data()))
   })
   
   effsp_plot_obj <- reactive({
@@ -999,16 +1040,16 @@ shinyServer(function(input, output, session) {
   output$comparisons <- renderUI({
     checkboxGroupInput("comparisons",
                        label = "Differential abundance pairwise comparisons",
-                       choices = lapply(c(1:(factorial(length(unique(attr(groupDF(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(groupDF(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(groupDF(),"group_DF")$Group),2)[,x], collapse="  VS  ")))
+                       choices = lapply(c(1:(factorial(length(unique(attr(filtered_data(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(filtered_data(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(filtered_data(),"group_DF")$Group),2)[,x], collapse="  VS  ")))
   })
   
   observe({
     if(input$selectall == 0){
       return(NULL)
     }else if(input$selectall%%2 == 0){
-      updateCheckboxGroupInput(session, "comparisons","Differential abundance pairwise comparisons", choices=lapply(c(1:(factorial(length(unique(attr(groupDF(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(groupDF(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(groupDF(),"group_DF")$Group),2)[,x], collapse="  VS  ")))
+      updateCheckboxGroupInput(session, "comparisons","Differential abundance pairwise comparisons", choices=lapply(c(1:(factorial(length(unique(attr(filtered_data(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(filtered_data(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(filtered_data(),"group_DF")$Group),2)[,x], collapse="  VS  ")))
     }else{
-      updateCheckboxGroupInput(session, "comparisons","Differential abundance pairwise comparisons", choices=lapply(c(1:(factorial(length(unique(attr(groupDF(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(groupDF(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(groupDF(),"group_DF")$Group),2)[,x], collapse="  VS  ")), selected=sapply(c(1:(factorial(length(unique(attr(groupDF(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(groupDF(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(groupDF(),"group_DF")$Group),2)[,x], collapse="  VS  ")))
+      updateCheckboxGroupInput(session, "comparisons","Differential abundance pairwise comparisons", choices=lapply(c(1:(factorial(length(unique(attr(filtered_data(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(filtered_data(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(filtered_data(),"group_DF")$Group),2)[,x], collapse="  VS  ")), selected=sapply(c(1:(factorial(length(unique(attr(filtered_data(),"group_DF")$Group)))/(factorial(2)*factorial(length(unique(attr(filtered_data(),"group_DF")$Group))-2)))), function(x) paste(combn(unique(attr(filtered_data(),"group_DF")$Group),2)[,x], collapse="  VS  ")))
     }
   })
   
@@ -1018,7 +1059,7 @@ shinyServer(function(input, output, session) {
       validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
       validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css","none"), "Normalization function must be one of the options specified."))
       
-      return(pmartRseq::normalize_data(omicsData=groupDF(), norm_fn=input$normFunc, normalize=FALSE))
+      return(pmartRseq::normalize_data(omicsData=filtered_data(), norm_fn=input$normFunc, normalize=FALSE))
     })
     
     comps <- reactive({
@@ -1035,7 +1076,7 @@ shinyServer(function(input, output, session) {
       validate(need(length(input$da_index) == 1, "Need to specify a differential abundance test"))
       validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
       
-      return(pmartRseq::countSTAT(omicsData = groupDF(), norm_factors = norm_factors()$scale_param, comparisons = comps(), control = NULL, test = input$da_index, pval_adjust = input$pval_adjust, pval_thresh = 0.05))
+      return(pmartRseq::countSTAT(omicsData = filtered_data(), norm_factors = norm_factors()$scale_param, comparisons = comps(), control = NULL, test = input$da_index, pval_adjust = input$pval_adjust, pval_thresh = 0.05))
       
     })
     
@@ -1255,7 +1296,7 @@ shinyServer(function(input, output, session) {
         pa_rE <- input$pa_randomEffect
       }
       
-      return(pmartRseq::pmartRseq_aldex2(omicsData = groupDF(), mainEffects = pa_mE, randomEffect = pa_rE, interactions = input$pa_Interactions, mc.samples = input$mcsamples))
+      return(pmartRseq::pmartRseq_aldex2(omicsData = filtered_data(), mainEffects = pa_mE, randomEffect = pa_rE, interactions = input$pa_Interactions, mc.samples = input$mcsamples))
 
     })
 

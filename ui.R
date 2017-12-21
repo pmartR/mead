@@ -83,7 +83,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
  # titlePanel(div(img(src = "Honey_Jar.png", height = 33, width = 22), "mead")),
  
 
- tabPanel("Data and Filtering", 
+ tabPanel("Data", 
           tags$head(
           ),
           fluidRow(column(width=12,
@@ -99,110 +99,134 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
                    tags$hr(),
                    h3("Load Data"),
                    fluidRow(
-                     column(width = 6, fileInput('biom', 'Choose BIOM File')),
+                     column(width = 4, fileInput('e_data', 'Choose Data File')),
                      # column(width = 4, fileInput('fasta', 'Choose FASTA file')),
-                     column(width = 6, fileInput('qiime', 'Choose Sample Metadata QIIME'))
+                     column(width = 4, fileInput('f_data', 'Choose Sample Metadata File')),
+                     column(width = 4, fileInput('e_meta', 'Optional, Choose Feature Metadata File'))
                    )
             )
           ),
-          #actionButton("Upload", "Upload ze data!"),
-  h3("Metadata View"),
-  fluidRow(
-    column(width = 12, tags$table(
-      DT::dataTableOutput("sample_metadata"),
-      tags$head(
-        tags$title(h4("Uploaded Metadata View"))
-      )))
-  ),
-  hr(),
-  h3("Filtering"),
-  h4("Sample Metadata"),
-  p("Filter samples on numeric ranges or groupable characteristics"),
-  br(),
-  fluidRow(
-    column(width = 5,  uiOutput("boxes")),
-    column(width = 6, uiOutput("plots"))
-    ),
-  fluidRow(
-    actionButton("metadata_reset_button", label = "Reset Meta Filter", icon = icon("trash")),
-    actionButton("metadata_filter_go", label = "Apply Meta Filter", icon = icon("bar-chart"))
-  ),
-  br(),
-  hr(),
-  # h3("Taxonomic Rollup"),
-  # p("Roll up from OTU-level data to a specified taxonomic level"),
-  # uiOutput("taxa_level"),
-  # br(),
-  # hr(),
-  fluidRow(
-    column(width = 4, 
-           h4("Sample Reads"),
-           p("Keep samples above a minimum number of reads"),
-           fluidRow(
-             column(width = 5, h5("Keep samples with at least")),
-             column(width = 2, numericInput(inputId = "n", label = "", value = 0, min = 0, width = 150)),
-             column(width = 2, h5("reads"))
-           ),
-           plotOutput("sample_counts_plot"),
-           fluidRow(
-             actionButton("sample_reset_button", label = "Reset Sample Filter", icon = icon("trash")),
-             actionButton("sample_filter_go", label = "Apply Sample Filter", icon = icon("bar-chart"))
-           )
-           ),
-    column(width = 4,
-           verbatimTextOutput("summ_filt")
-    ),
-    column(width = 4, 
-           h4("OTU Counts Per Sample"),
-           p("Keep OTUs with a minimum number of counts per sample"),
-           fluidRow(
-             column(width = 3, h5("Keep OTUs with more than"), align = 'center'),
-             column(width = 2,  numericInputRow("filter_kOverA_count_threshold", "",
-                                                value = kovera_A, min = 0, step = 1)),
-             column(width = 3, h5("counts in at least")),
-             column(width = 2, uiOutput("filter_ui_kOverA_k")),
-             column(width = 2, h5("samples"))
-           ),
-           br(),
-           plotOutput("read_counts_plot"),
-           fluidRow(
-             actionButton("otu_reset_button", label = "Reset OTU Filter", icon = icon("trash")),
-             actionButton("otu_filter_go", label = "Apply OTU Filter", icon = icon("bar-chart"))
-           )
-           )
-           )
+
+          # fluidRow(
+          #   column(width = 12,
+          #          tags$hr(),
+          #          h3("Specify Column Names"),
+          #          fluidRow(
+          #            column(width = 4, uiOutput("edata_cname")),
+          #            column(width = 4, uiOutput("fdata_cname")),
+          #            column(width = 4, uiOutput("taxa_cname"))
+          #          )
+          #   )
+          # ),
+          # actionButton("Upload", "Upload ze data!"),
+          h3("Data View"),
+          fluidRow(
+            column(width = 12, tags$table(
+              DT::dataTableOutput("sample_data"),
+              tags$head(
+                tags$title(h4("Uploaded Data View"))
+              )))
+          ),
+          h2("Groupings"),
+          h3("Main Effects"),
+          # fluidRow(
+          #    column(width=3, uiOutput("group1")),
+          #    column(width=3, uiOutput("group2"))
+          #    ),
+          uiOutput("gdfMainEffect"),
+          #actionButton("covs","Add Covariates"),
+          # h3("Covariates"),
+          # fluidRow(
+          #   column(width=3, uiOutput("cov1")),
+          #   column(width=3, uiOutput("cov2"))
+          # ),
+          #uiOutput("cov1"),
+          #uiOutput("cov2"),
+          # fluidRow(
+          #   actionButton("groupDF_reset_button", label = "Reset Groupings", icon = icon("trash")),
+          #   actionButton("groupDF_go", label = "Apply Groupings", icon = icon("check"))
+          # ),
+          p("The following table shows which group each sample belongs to."),
+          DT::dataTableOutput("group_DF"),
+          br(),
+          p("The following table shows the number of samples in each group."),
+          DT::dataTableOutput("group_tab"),
+          br()
   ),
 
-  
-  tabPanel("Group Designation",
-           #verbatimTextOutput("summ_filt"),
-           #verbatimTextOutput("nrow_edata"),
-           h2("Groupings"),
-           h3("Main Effects"),
-           # fluidRow(
-           #    column(width=3, uiOutput("group1")),
-           #    column(width=3, uiOutput("group2"))
-           #    ),
-           uiOutput("gdfMainEffect"),
-           #actionButton("covs","Add Covariates"),
-           # h3("Covariates"),
-           # fluidRow(
-           #   column(width=3, uiOutput("cov1")),
-           #   column(width=3, uiOutput("cov2"))
-           # ),
-           #uiOutput("cov1"),
-           #uiOutput("cov2"),
-           # fluidRow(
-           #   actionButton("groupDF_reset_button", label = "Reset Groupings", icon = icon("trash")),
-           #   actionButton("groupDF_go", label = "Apply Groupings", icon = icon("check"))
-           # ),
-           p("The following table shows which group each sample belongs to."),
-           DT::dataTableOutput("group_DF"),
+  tabPanel("Filtering",
+           h3("Metadata View"),
+           fluidRow(
+             column(width = 12, tags$table(
+               DT::dataTableOutput("sample_metadata"),
+               tags$head(
+                 tags$title(h4("Uploaded Metadata View"))
+               )))
+           ),
+           hr(),
+           h3("Filtering"),
+           h4("Sample Metadata"),
+           p("Filter samples on numeric ranges or groupable characteristics"),
            br(),
-           p("The following table shows the number of samples in each group."),
-           DT::dataTableOutput("group_tab"),
-           br()
-   ),
+           fluidRow(
+             column(width = 5,  uiOutput("boxes")),
+             column(width = 6, uiOutput("plots"))
+           ),
+           fluidRow(
+             actionButton("metadata_reset_button", label = "Reset Meta Filter", icon = icon("trash")),
+             actionButton("metadata_filter_go", label = "Apply Meta Filter", icon = icon("bar-chart"))
+           ),
+           br(),
+           hr(),
+           # h3("Taxonomic Rollup"),
+           # p("Roll up from OTU-level data to a specified taxonomic level"),
+           # uiOutput("taxa_level"),
+           # br(),
+           # hr(),
+           fluidRow(
+             column(width = 4, 
+                    h4("Sample Reads"),
+                    p("Keep samples above a minimum number of reads"),
+                    fluidRow(
+                      column(width = 5, h5("Keep samples with at least")),
+                      column(width = 2, numericInput(inputId = "n", label = "", value = 0, min = 0, width = 150)),
+                      column(width = 2, h5("reads"))
+                    ),
+                    plotOutput("sample_counts_plot"),
+                    fluidRow(
+                      actionButton("sample_reset_button", label = "Reset Sample Filter", icon = icon("trash")),
+                      actionButton("sample_filter_go", label = "Apply Sample Filter", icon = icon("bar-chart"))
+                    )
+             ),
+             column(width = 4,
+                    verbatimTextOutput("summ_filt")
+             ),
+             column(width = 4, 
+                    h4("OTU Counts Per Sample"),
+                    p("Keep OTUs with a minimum number of counts per sample"),
+                    fluidRow(
+                      column(width = 3, h5("Keep OTUs with more than"), align = 'center'),
+                      column(width = 2,  numericInputRow("filter_kOverA_count_threshold", "",
+                                                         value = kovera_A, min = 0, step = 1)),
+                      column(width = 3, h5("counts in at least")),
+                      column(width = 2, uiOutput("filter_ui_kOverA_k")),
+                      column(width = 2, h5("samples"))
+                    ),
+                    br(),
+                    plotOutput("read_counts_plot"),
+                    fluidRow(
+                      actionButton("otu_reset_button", label = "Reset OTU Filter", icon = icon("trash")),
+                      actionButton("otu_filter_go", label = "Apply OTU Filter", icon = icon("bar-chart"))
+                    )
+             )
+           )
+    ),
+ 
+  # tabPanel("Group Designation",
+  #          #verbatimTextOutput("summ_filt"),
+  #          #verbatimTextOutput("nrow_edata"),
+  #         
+  #  ),
    
  tabPanel("Outliers",
           p("Use the Jaccard Index to look for other outliers in the dataset."),
