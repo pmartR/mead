@@ -566,13 +566,13 @@ shinyServer(function(input, output, session) {
   
   #-------------- taxa filtering -----------#
   
-  # output$criteria <- renderUI({
-  #     selectInput("criteria",
-  #                 label = "Which taxonomic level to use for filtering",
-  #                 choices = colnames(groupDF()$e_meta),
-  #                 selected = colnames(groupDF()$e_meta)[2],
-  #                 multiple = FALSE)
-  # })
+  output$criteria <- renderUI({
+      selectInput("criteria",
+                  label = "Which taxonomic level to use for filtering",
+                  choices = colnames(groupDF()$e_meta),
+                  selected = colnames(groupDF()$e_meta)[2],
+                  multiple = FALSE)
+  })
   
   output$keep_taxa <- renderUI({
       selectInput("keep_taxa",
