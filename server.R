@@ -178,7 +178,7 @@ shinyServer(function(input, output, session) {
   # ################ Filtering Tab #################
   
   #-------- filter history support -----------#
-  filters <- reactiveValues(otu = list(), sample = list(), metadata = list(), outlier = list())
+  filters <- reactiveValues(otu = list(), sample = list(), taxa = list(), metadata = list(), outlier = list())
   
   #--------- kovera observer ---------#
   observeEvent(input$otu_filter_go,{
@@ -188,6 +188,11 @@ shinyServer(function(input, output, session) {
   #--------- sample observer ---------#
   observeEvent(input$sample_filter_go, {
     filters$sample[[input$sample_filter_go]] <- sample_filter_obj()
+  })
+  
+  #--------- taxa observer ---------#
+  observeEvent(input$taxa_filter_go, {
+    filters$taxa[[input$taxa_filter_go]] <- taxa_filter_obj()
   })
   
   #--------- metadata observer ---------#
@@ -213,6 +218,11 @@ shinyServer(function(input, output, session) {
     filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$sample[[input$sample_filter_go]],
                                                omicsData = filtered_rRNA_obj,
                                                upper_lim = input$n)
+  })
+  observeEvent(input$taxa_filter_go, {
+    filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$taxa[[input$taxa_filter_go]],
+                                               omicsData = filtered_rRNA_obj,
+                                               keep_taxa = input$keep_taxa)
   })
   observeEvent(input$metadata_filter_go, {
     # get the intersection of the samples left after checkbox groups are removed
@@ -269,17 +279,27 @@ shinyServer(function(input, output, session) {
     # no sample filter yet
     if (input$sample_filter_go == 0) {
       filtered_rRNA_obj <<- filt1
-      return(filtered_rRNA_obj)
-    }
-    if (input$sample_filter_go != 0) {
+      #return(filtered_rRNA_obj)
+    }else{
       # apply sample filter
       isolate({
         filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$sample[[input$sample_filter_go]],
                                                    omicsData = filt1,
                                                    upper_lim = input$n)
-        return(filtered_rRNA_obj)
+        #return(filtered_rRNA_obj)
       })
     }
+    
+    if(input$taxa_filter_go == 0){
+      filtered_rRNA_obj <- filtered_rRNA_obj
+    }else{
+      isolate({
+        filtered_rRNA_obj <- pmartRseq::applyFilt(filter_object = filter$taxa[[input$taxa_filter_go]],
+                                      omicsData = filtered_rRNA_obj,
+                                      taxa_keep = input$taxa_keep)
+      })
+    }
+    return(filtered_rRNA_obj)
   })
   
   observeEvent(input$sample_reset_button, {
@@ -288,8 +308,7 @@ shinyServer(function(input, output, session) {
                        value = 0)
     if (input$otu_filter_go == 0) {
       filt1 <- groupDF()
-    } 
-    if (input$otu_filter_go != 0) {
+    }else{
       # apply k over a filter
       isolate({
         filt1 <- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
@@ -299,10 +318,83 @@ shinyServer(function(input, output, session) {
       })
     }
     
+    if(input$taxa_filter_go == 0){
+      filt1 <- filt1
+    }else{
+      isolate({
+        filt1 <- pmartRseq::applyFilt(filter_object = filter$taxa[[input$taxa_filter_go]],
+                                      omicsData = filt1,
+                                      taxa_keep = input$taxa_keep)
+      })
+    }
+    
     # no sample filter yet
     filtered_rRNA_obj <<- filt1
     return(filtered_rRNA_obj)
   })
+  
+  observeEvent(input$taxa_reset_button, {
+    
+    output$criteria <- renderUI({
+      selectInput("criteria",
+                  label = "Which taxonomic level to use for filtering",
+                  choices = colnames(groupDF()$e_meta),
+                  multiple = FALSE)
+    })
+
+    taxa_keep = reactive({
+      # Create logical indicating the samples to keep, or dummy logical if nonsense input
+      validate(
+        need(!(is.null(groupDF()$e_meta)), message = "please import feature metadata")
+      )
+      if (!is.null(groupDF()$e_meta)) {
+        return(unique(groupDF()$e_meta[,input$criteria]))
+      } else {
+        return(NULL)
+      }
+      
+    })
+    
+    output$taxa_keep <- renderUI({
+        selectInput("taxa_keep",
+                    label = "Which taxa to keep in the analysis",
+                    choices = c(taxa_keep),
+                    multiple = TRUE)
+      })
+    
+    filt1 <- groupDF()
+    # no sample filter yet
+    if (input$sample_filter_go == 0) {
+      filtered_rRNA_obj <<- filt1
+      #return(filtered_rRNA_obj)
+    }else{
+      # apply sample filter
+      isolate({
+        filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$sample[[input$sample_filter_go]],
+                                                   omicsData = filt1,
+                                                   upper_lim = input$n)
+        #return(filtered_rRNA_obj)
+      })
+    }
+
+    # no sample filter yet
+    if (input$otu_filter_go == 0) {
+      filtered_rRNA_obj <<- filtered_rNRA_obj
+      #return(filtered_rRNA_obj)
+    }else{
+      # apply sample filter
+      isolate({
+        filtered_rRNA_obj <- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
+                                      omicsData = filtered_rRNA_obj,
+                                      num_samps = input$filter_kOverA_sample_threshold,
+                                      upper_lim = input$filter_kOverA_count_threshold)  
+        
+      })
+    }
+    return(filtered_rRNA_obj)
+    })
+  
+  #})
   
   #--------- Metadata Object for filtering -----------#
   metadata_obj <- reactive({
@@ -443,7 +535,7 @@ shinyServer(function(input, output, session) {
       need( input$filter_kOverA_count_threshold >= 0, message = "Enter a count minimum >= 0"),
       need( input$filter_kOverA_sample_threshold >= 0, message = "Enter a sample minimum >= 0")
     )
-    if (input$sample_filter_go == 0 & input$otu_filter_go == 0) {
+    if (input$sample_filter_go == 0 & input$otu_filter_go == 0 & input$taxa_filter_go == 0) {
       plot(otu_filter_obj(), min_num = input$filter_kOverA_count_threshold, min_samp = input$filter_kOverA_sample_threshold)
     } else{
       otu_filt_obj <- pmartRseq::count_based_filter(filtered_rRNA_obj, fn = "ka")
@@ -472,6 +564,44 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  #-------------- taxa filtering -----------#
+  
+  # output$criteria <- renderUI({
+  #     selectInput("criteria",
+  #                 label = "Which taxonomic level to use for filtering",
+  #                 choices = colnames(groupDF()$e_meta),
+  #                 selected = colnames(groupDF()$e_meta)[2],
+  #                 multiple = FALSE)
+  # })
+  
+  output$keep_taxa <- renderUI({
+      selectInput("keep_taxa",
+                  label = "Which taxonomies to keep",
+                  choices = unique(groupDF()$e_meta[,2]),
+                  multiple = TRUE)
+  })
+  
+  taxa_filter_obj <- reactive({
+    if(length(input$criteria) == 0){
+      criteria <- colnames(groupDF()$e_meta)[2]
+    }else{
+      criteria <- input$criteria
+    }
+    return(pmartRseq::metadata_based_filter(omicsData = groupDF(), criteria = criteria))
+  })
+  
+  output$taxa_counts <- renderTable({
+    # validate(
+    #   need(length(input$criteria) > 0, message = "Need taxa criteria")
+    # )
+    if (input$taxa_filter_go == 0 & input$otu_filter_go == 0 & input$sample_filter_go == 0) {
+      table(taxa_filt_obj()[which(taxa_filt_obj()[,1] %in% input$taxa_keep),2])
+    } else {
+      taxa_filt_obj <- pmartRseq::sample_based_filter(omicsData = filtered_rRNA_obj, criteria = input$criteria)
+      table(taxa_filt_obj[which(taxa_filt_obj[,1] %in% input$taxa_keep),2])
+    }
+  })
+
   #------------ reactive filtered data for downstream processing --------------#
   
   
@@ -482,6 +612,8 @@ shinyServer(function(input, output, session) {
     input$sample_reset_button
     input$otu_filter_go
     input$otu_reset_button
+    input$taxa_filter_go
+    input$taxa_reset_button
     input$remove_outliers
     # print("removing outliers")
     # print(filtered_rRNA_obj$e_data)

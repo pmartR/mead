@@ -219,7 +219,14 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
                       actionButton("otu_filter_go", label = "Apply OTU Filter", icon = icon("bar-chart"))
                     )
              )
-           )
+           ),
+           uiOutput("criteria"),
+           uiOutput("keep_taxa"),
+           fluidRow(
+             actionButton("taxa_reset_button", label = "Reset Taxa Filter", icon = icon("trash")),
+             actionButton("taxa_filter_go", label = "Apply Taxa Filter", icon = icon("bar-chart"))
+           ),
+           tableOutput("taxa_counts")
     ),
  
   # tabPanel("Group Designation",
