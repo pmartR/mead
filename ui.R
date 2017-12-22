@@ -220,13 +220,16 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
                     )
              )
            ),
+           br(),
+           hr(),
+           h4("Taxonomic Filtering"),
            uiOutput("criteria"),
            uiOutput("keep_taxa"),
+           verbatimTextOutput("taxa_counts"),
            fluidRow(
              actionButton("taxa_reset_button", label = "Reset Taxa Filter", icon = icon("trash")),
              actionButton("taxa_filter_go", label = "Apply Taxa Filter", icon = icon("bar-chart"))
-           ),
-           tableOutput("taxa_counts")
+           )
     ),
  
   # tabPanel("Group Designation",
