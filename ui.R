@@ -229,7 +229,8 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
            fluidRow(
              actionButton("taxa_reset_button", label = "Reset Taxa Filter", icon = icon("trash")),
              actionButton("taxa_filter_go", label = "Apply Taxa Filter", icon = icon("bar-chart"))
-           )
+           ),
+           br()
     ),
  
   # tabPanel("Group Designation",

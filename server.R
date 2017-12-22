@@ -83,15 +83,20 @@ shinyServer(function(input, output, session) {
       validate(
         need(importObj, message = "Please upload data files to begin analysis")
       )
-      return(pmartRseq::as.seqData(e_data = importObj()$e_data,
+      tmp <- pmartRseq::as.seqData(e_data = importObj()$e_data,
                                    f_data = importObj()$f_data,
                                    e_meta = importObj()$e_meta,
                                    fdata_cname = importObj()$guessed_fdata_cname,
                                    edata_cname = importObj()$guessed_edata_cname,
                                    taxa_cname = importObj()$guessed_taxa_cname,
-                                   data_type = "rRNA"))
+                                   data_type = "rRNA")
+      
+      tmp <- pmartRseq::split_emeta(tmp, cname=attr(tmp,"cnames")$edata_cname, split1=NULL, numcol=7, split2="__", num=2, newnames=NULL)
+      
+      return(tmp)
       
     })
+    
     
     output$sample_data <- DT::renderDataTable(expr = 
                                                 data.frame(rRNAobj()$e_data), rownames = FALSE, class = 'cell-border stripe compact hover',
@@ -291,10 +296,10 @@ shinyServer(function(input, output, session) {
     }
     
     if(input$taxa_filter_go == 0){
-      filtered_rRNA_obj <- filtered_rRNA_obj
+      filtered_rRNA_obj <<- filtered_rRNA_obj
     }else{
       isolate({
-        filtered_rRNA_obj <- pmartRseq::applyFilt(filter_object = filter$taxa[[input$taxa_filter_go]],
+        filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filter$taxa[[input$taxa_filter_go]],
                                       omicsData = filtered_rRNA_obj,
                                       taxa_keep = input$taxa_keep)
       })
@@ -307,11 +312,11 @@ shinyServer(function(input, output, session) {
     updateNumericInput(session, "n",
                        value = 0)
     if (input$otu_filter_go == 0) {
-      filt1 <- groupDF()
+      filt1 <<- groupDF()
     }else{
       # apply k over a filter
       isolate({
-        filt1 <- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
+        filt1 <<- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
                                       omicsData = groupDF(),
                                       num_samps = input$filter_kOverA_sample_threshold,
                                       upper_lim = input$filter_kOverA_count_threshold)  
@@ -319,10 +324,10 @@ shinyServer(function(input, output, session) {
     }
     
     if(input$taxa_filter_go == 0){
-      filt1 <- filt1
+      filt1 <<- filt1
     }else{
       isolate({
-        filt1 <- pmartRseq::applyFilt(filter_object = filter$taxa[[input$taxa_filter_go]],
+        filt1 <<- pmartRseq::applyFilt(filter_object = filter$taxa[[input$taxa_filter_go]],
                                       omicsData = filt1,
                                       taxa_keep = input$taxa_keep)
       })
@@ -335,32 +340,47 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$taxa_reset_button, {
     
+    # output$criteria <- renderUI({
+    #   selectInput("criteria",
+    #               label = "Which taxonomic level to use for filtering",
+    #               choices = colnames(groupDF()$e_meta),
+    #               multiple = FALSE)
+    # })
+    # 
+    # taxa_keep = reactive({
+    #   # Create logical indicating the samples to keep, or dummy logical if nonsense input
+    #   validate(
+    #     need(!(is.null(groupDF()$e_meta)), message = "please import feature metadata")
+    #   )
+    #   if (!is.null(groupDF()$e_meta)) {
+    #     return(unique(groupDF()$e_meta[,input$criteria]))
+    #   } else {
+    #     return(NULL)
+    #   }
+    #   
+    # })
+    # 
+    # output$keep_taxa <- renderUI({
+    #     selectInput("keep_taxa",
+    #                 label = "Which taxa to keep in the analysis",
+    #                 choices = c(taxa_keep),
+    #                 multiple = TRUE)
+    #   })
+    
     output$criteria <- renderUI({
       selectInput("criteria",
                   label = "Which taxonomic level to use for filtering",
                   choices = colnames(groupDF()$e_meta),
+                  selected = colnames(groupDF()$e_meta)[2],
                   multiple = FALSE)
     })
-
-    taxa_keep = reactive({
-      # Create logical indicating the samples to keep, or dummy logical if nonsense input
-      validate(
-        need(!(is.null(groupDF()$e_meta)), message = "please import feature metadata")
-      )
-      if (!is.null(groupDF()$e_meta)) {
-        return(unique(groupDF()$e_meta[,input$criteria]))
-      } else {
-        return(NULL)
-      }
-      
-    })
     
-    output$taxa_keep <- renderUI({
-        selectInput("taxa_keep",
-                    label = "Which taxa to keep in the analysis",
-                    choices = c(taxa_keep),
-                    multiple = TRUE)
-      })
+    output$keep_taxa <- renderUI({
+      selectInput("keep_taxa",
+                  label = "Which taxonomies to keep",
+                  choices = unique(groupDF()$e_meta[,2]),
+                  multiple = TRUE)
+    })
     
     filt1 <- groupDF()
     # no sample filter yet
@@ -377,14 +397,14 @@ shinyServer(function(input, output, session) {
       })
     }
 
-    # no sample filter yet
+    # no otu filter yet
     if (input$otu_filter_go == 0) {
-      filtered_rRNA_obj <<- filtered_rNRA_obj
+      filtered_rRNA_obj <<- filtered_rRNA_obj
       #return(filtered_rRNA_obj)
     }else{
       # apply sample filter
       isolate({
-        filtered_rRNA_obj <- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
+        filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
                                       omicsData = filtered_rRNA_obj,
                                       num_samps = input$filter_kOverA_sample_threshold,
                                       upper_lim = input$filter_kOverA_count_threshold)  
@@ -597,10 +617,10 @@ shinyServer(function(input, output, session) {
     if (input$taxa_filter_go == 0 & input$otu_filter_go == 0 & input$sample_filter_go == 0) {
       #table(taxa_filter_obj()[which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa),input$criteria])
       #which(taxa_filter_obj()[,input$criteria] %in% input$taxa_keep)
-      cat("This keeps ",length(which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa))," out of a possible ",nrow(taxa_filter_obj()), " features (roughly ", length(which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa))/nrow(taxa_filter_obj())*100,"%).")
+      cat("This keeps ",length(which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa))," out of a possible ",nrow(taxa_filter_obj()), " features (roughly ", length(which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa))/nrow(taxa_filter_obj())*100,"%). This correlates to a total number of ",sum(taxa_filter_obj()$Sum[which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa)], na.rm=TRUE)," sequences kept out of a possible ",sum(taxa_filter_obj()$Sum, na.rm=TRUE)," sequences(roughly ",sum(taxa_filter_obj()$Sum[which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa)], na.rm=TRUE)/sum(taxa_filter_obj()$Sum, na.rm=TRUE)*100,"%).")
     } else {
       taxa_filter_obj <- pmartRseq::metadata_based_filter(omicsData = filtered_rRNA_obj, criteria = input$criteria)
-      cat("This keeps ",length(which(taxa_filter_obj[,input$criteria] %in% input$keep_taxa))," out of a possible ",nrow(taxa_filter_obj), " features (roughly ", length(which(taxa_filter_obj[,input$criteria] %in% input$keep_taxa))/nrow(taxa_filter_obj)*100,"%).")
+      cat("This keeps ",length(which(taxa_filter_obj[,input$criteria] %in% input$keep_taxa))," out of a possible ",nrow(taxa_filter_obj), " features (roughly ", length(which(taxa_filter_obj[,input$criteria] %in% input$keep_taxa))/nrow(taxa_filter_obj)*100,"%). This correlates to a total number of ",sum(taxa_filter_obj$Sum[which(taxa_filter_obj[,input$criteria] %in% input$keep_taxa)], na.rm=TRUE)," sequences kept out of a possible ",sum(taxa_filter_obj$Sum, na.rm=TRUE)," sequences(roughly ",sum(taxa_filter_obj$Sum[which(taxa_filter_obj[,input$criteria] %in% input$keep_taxa)], na.rm=TRUE)/sum(taxa_filter_obj$Sum, na.rm=TRUE)*100,"%).")
     }
   })
 
@@ -750,7 +770,8 @@ shinyServer(function(input, output, session) {
     validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
     validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css","none"), "Normalization function must be one of the options specified."))
     
-    return(pmartRseq::split_emeta(pmartRseq::normalize_data(omicsData=filtered_data(), norm_fn=input$normFunc, normalize=TRUE), cname="OTU", split1=NULL, numcol=7, split2="__", num=2, newnames=NULL))
+    #return(pmartRseq::split_emeta(pmartRseq::normalize_data(omicsData=filtered_data(), norm_fn=input$normFunc, normalize=TRUE), cname="OTU", split1=NULL, numcol=7, split2="__", num=2, newnames=NULL))
+    return(pmartRseq::normalize_data(omicsData=filtered_data(), norm_fn=input$normFunc, normalize=TRUE))
   })
   
   # Look at normalized results
@@ -1129,7 +1150,7 @@ shinyServer(function(input, output, session) {
       #pmartRseq::pmartRseq_NMDS(res = vegmds(), omicsData = normalized_data(), grp = input$ord_colors, k = input$k, 
       #                         x_axis = input$ord_x, y_axis = input$ord_y, ellipses=input$ellipses)
       req(input$submit_ord)
-      Sys.sleep(5)
+      #Sys.sleep(5)
       print(ord_plot_obj())
       # }else if(input$ord_method == "PCA"){
       #   mead_PCA(XX = vegmds(),
