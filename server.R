@@ -591,11 +591,11 @@ shinyServer(function(input, output, session) {
   })
   
   output$taxa_counts <- renderTable({
-    # validate(
-    #   need(length(input$criteria) > 0, message = "Need taxa criteria")
-    # )
+    validate(
+      need(length(input$keep_taxa) > 0, message = "Need taxa criteria")
+    )
     if (input$taxa_filter_go == 0 & input$otu_filter_go == 0 & input$sample_filter_go == 0) {
-      table(taxa_filt_obj()[which(taxa_filt_obj()[,1] %in% input$taxa_keep),2])
+      table(taxa_filter_obj()[which(taxa_filter_obj()[,1] %in% input$taxa_keep),2])
     } else {
       taxa_filt_obj <- pmartRseq::sample_based_filter(omicsData = filtered_rRNA_obj, criteria = input$criteria)
       table(taxa_filt_obj[which(taxa_filt_obj[,1] %in% input$taxa_keep),2])
