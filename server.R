@@ -617,10 +617,10 @@ shinyServer(function(input, output, session) {
     if (input$taxa_filter_go == 0 & input$otu_filter_go == 0 & input$sample_filter_go == 0) {
       #table(taxa_filter_obj()[which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa),input$criteria])
       #which(taxa_filter_obj()[,input$criteria] %in% input$taxa_keep)
-      cat("This keeps ",length(which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa))," out of a possible ",nrow(taxa_filter_obj()), " features (roughly ", length(which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa))/nrow(taxa_filter_obj())*100,"%). This correlates to a total number of ",sum(taxa_filter_obj()$Sum[which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa)], na.rm=TRUE)," sequences kept out of a possible ",sum(taxa_filter_obj()$Sum, na.rm=TRUE)," sequences(roughly ",sum(taxa_filter_obj()$Sum[which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa)], na.rm=TRUE)/sum(taxa_filter_obj()$Sum, na.rm=TRUE)*100,"%).")
+      cat("This keeps ",length(which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa))," out of a possible ",nrow(taxa_filter_obj()), " features (roughly ", length(which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa))/nrow(taxa_filter_obj())*100,"%). This correlates to a total number of ",sum(taxa_filter_obj()$Sum[which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa)], na.rm=TRUE)," sequences kept out of a possible ",sum(taxa_filter_obj()$Sum, na.rm=TRUE)," sequences (roughly ",sum(taxa_filter_obj()$Sum[which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa)], na.rm=TRUE)/sum(taxa_filter_obj()$Sum, na.rm=TRUE)*100,"%).")
     } else {
       taxa_filter_obj <- pmartRseq::metadata_based_filter(omicsData = filtered_rRNA_obj, criteria = input$criteria)
-      cat("This keeps ",length(which(taxa_filter_obj[,input$criteria] %in% input$keep_taxa))," out of a possible ",nrow(taxa_filter_obj), " features (roughly ", length(which(taxa_filter_obj[,input$criteria] %in% input$keep_taxa))/nrow(taxa_filter_obj)*100,"%). This correlates to a total number of ",sum(taxa_filter_obj$Sum[which(taxa_filter_obj[,input$criteria] %in% input$keep_taxa)], na.rm=TRUE)," sequences kept out of a possible ",sum(taxa_filter_obj$Sum, na.rm=TRUE)," sequences(roughly ",sum(taxa_filter_obj$Sum[which(taxa_filter_obj[,input$criteria] %in% input$keep_taxa)], na.rm=TRUE)/sum(taxa_filter_obj$Sum, na.rm=TRUE)*100,"%).")
+      cat("This keeps ",length(which(taxa_filter_obj[,input$criteria] %in% input$keep_taxa))," out of a possible ",nrow(taxa_filter_obj), " features (roughly ", length(which(taxa_filter_obj[,input$criteria] %in% input$keep_taxa))/nrow(taxa_filter_obj)*100,"%). This correlates to a total number of ",sum(taxa_filter_obj$Sum[which(taxa_filter_obj[,input$criteria] %in% input$keep_taxa)], na.rm=TRUE)," sequences kept out of a possible ",sum(taxa_filter_obj$Sum, na.rm=TRUE)," sequences (roughly ",sum(taxa_filter_obj$Sum[which(taxa_filter_obj[,input$criteria] %in% input$keep_taxa)], na.rm=TRUE)/sum(taxa_filter_obj$Sum, na.rm=TRUE)*100,"%).")
     }
   })
 
@@ -1208,7 +1208,7 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  observeEvent(input$submit_da, {
+  #observeEvent(input$submit_da, {
     # Calculate normalization factors to use in differential abundance test - will use the same that was used on normalization tab
     norm_factors <- reactive({
       validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
@@ -1228,6 +1228,7 @@ shinyServer(function(input, output, session) {
     
     # Perform differential abundance analysis
     diffabun_res <<- reactive({
+      req(input$submit_da)
       validate(need(length(input$da_index) == 1, "Need to specify a differential abundance test"))
       validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
       
@@ -1236,9 +1237,13 @@ shinyServer(function(input, output, session) {
     })
     
     # Look at the results - this is hard to look at, maybe remove?
-    output$da_res <- DT::renderDataTable(diffabun_res()$allResults)
+    output$da_res <- renderDataTable({
+      req(input$submit_da)
+      diffabun_res()$allResults
+      })
     
     output$da_summary <- renderPrint({
+      req(input$submit_da)
       summary(diffabun_res())
     })
     
@@ -1247,6 +1252,8 @@ shinyServer(function(input, output, session) {
     })
     # Plot showing number differentially abundant in each comparison and direction of change
     output$flag_plot <- renderPlot({
+      req(input$submit_da)
+      
       #plot(diffabun_res(), type = "flag")
       print(da_flag_plot_obj())
     })
@@ -1256,6 +1263,7 @@ shinyServer(function(input, output, session) {
     })
     # Heatmap showing the log2foldchanges of differentially abundant features
     output$logfc_plot <- renderPlot({
+      req(input$submit_da)
       #plot(diffabun_res(), type = "logfc")
       print(da_logfc_plot_obj())
     })
@@ -1265,10 +1273,11 @@ shinyServer(function(input, output, session) {
     })
     # Plot showing log fold changes and p-values of all features, grouped by taxonomy
     output$plot_all_da <- renderPlot({
+      req(input$submit_da)
       #pmartRseq::plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2", x_lab = "Phylum")
       print(plot_all_da_obj())
     })
-  }, autoDestroy = FALSE)
+  #}, autoDestroy = FALSE)
   
   ################ Indicator Species Tab #################
   #----------- indicator species ----------#
@@ -1288,8 +1297,9 @@ shinyServer(function(input, output, session) {
                 value = 0.05)
   })
   
-  observeEvent(input$submit_is, {
+  #observeEvent(input$submit_is, {
     indsp_res <<- reactive({
+      req(input$submit_is)
       if(input$within == "NA"){
         return(pmartRseq::indsp_calc(omicsData = normalized_data(), within = NULL, pval_thresh = input$is_pval_thresh))
       }else{
@@ -1297,14 +1307,19 @@ shinyServer(function(input, output, session) {
       }
     })
     
-    output$indsp_results <- DT::renderDataTable(indsp_res())
+    output$indsp_results <- renderDataTable({
+      req(input$submit_is)
+      indsp_res()
+      })
     
     output$indsp_summary <- renderPrint({
+      req(input$submit_is)
       summary(indsp_res())
     })
     
     
     output$indsp_xaxis <- renderUI({
+      req(input$submit_is)
       selectInput("indsp_xaxis",
                   label = "X-Axis for Indicator Species Plot",
                   choices = colnames(attr(normalized_data(),"group_DF"))[-which(colnames(attr(normalized_data(),"group_DF"))==attr(normalized_data(),"cnames")$fdata_cname)],
@@ -1312,6 +1327,7 @@ shinyServer(function(input, output, session) {
     })
     
     output$indsp_group <- renderUI({
+      req(input$submit_is)
       selectInput("indsp_group",
                   label = "Fill Variable for Indicator Species Plot",
                   choices = colnames(normalized_data()$e_meta),
@@ -1322,10 +1338,11 @@ shinyServer(function(input, output, session) {
       pmartRseq::plot_indsp(indsp = indsp_res(), omicsData = normalized_data(), x_axis = input$indsp_xaxis, group = input$indsp_group)
     })
     output$indsp_plot <- renderPlot({
+      req(input$submit_is)
       #pmartRseq::plot_indsp(indsp = indsp_res(), omicsData = normalized_data(), x_axis = input$indsp_xaxis, group = input$indsp_group)
       print(indsp_plot_obj())
     })
-  }, autoDestroy = FALSE)
+  #}, autoDestroy = FALSE)
   
   
   ################ Stats Results Tab #################
@@ -1432,10 +1449,11 @@ shinyServer(function(input, output, session) {
   })
 
 
-  observeEvent(input$submit_pa, {
+  #observeEvent(input$submit_pa, {
 
     # Perform differential abundance analysis
     pa_results <<- reactive({
+      req(input$submit_pa)
       validate(need(length(input$mcsamples) == 1, "Need to specify number of Monte Carlo samples"))
       #validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
 
@@ -1456,9 +1474,13 @@ shinyServer(function(input, output, session) {
     })
 
     # Look at the results - this is hard to look at, maybe remove?
-    output$pa_res <- DT::renderDataTable(pa_results()$results)
+    output$pa_res <- renderDataTable({
+      req(input$submit_pa)
+      pa_results()$results
+      })
 
     output$pa_summary <- renderPrint({
+      req(input$submit_pa)
       summary(pa_results())
     })
 
@@ -1467,6 +1489,7 @@ shinyServer(function(input, output, session) {
     })
     # Heatmap showing the log2foldchanges of differentially abundant features
     output$pa_pval_plot <- renderPlot({
+      req(input$submit_pa)
       #plot(diffabun_res(), type = "logfc")
       print(pa_pval_plot_obj())
     })
@@ -1476,11 +1499,12 @@ shinyServer(function(input, output, session) {
     })
     # Plot showing number differentially abundant in each comparison and direction of change
     output$pa_flag_plot <- renderPlot({
+      req(input$submit_pa)
       #plot(diffabun_res(), type = "flag")
       print(pa_flag_plot_obj())
     })
 
-  }, autoDestroy = FALSE)
+  #}, autoDestroy = FALSE)
   
   ################ Network Analysis Tab #################
   #----------- network ----------#
@@ -1599,10 +1623,11 @@ shinyServer(function(input, output, session) {
   })
   
   
-  observeEvent(input$submit_na, {
+  #observeEvent(input$submit_na, {
     
     # Perform differential abundance analysis
     na_network <<- reactive({
+      req(input$submit_na)
       validate(need(length(input$na_missingval) == 1, "Need to specify what value to use for missing values"))
       #validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
       
@@ -1622,13 +1647,14 @@ shinyServer(function(input, output, session) {
     })
     
     na_igraph <<- reactive({
+      req(input$submit_na)
       validate(need(length(input$na_missingval) == 1, "Need to specify what value to use for missing values"))
       
       return(pmartRseq::pmartRseq_igraph(netData = na_network(), coeff = input$na_coeff, qval = input$na_qval, pval = NULL))
     })
     
     na_network_plot <<- reactive({
-      
+      req(input$submit_na)
       if(input$na_colour != "NA"){
         na_colour <- input$na_colour
       }else{
@@ -1639,14 +1665,16 @@ shinyServer(function(input, output, session) {
     
     # Network Plot
     output$na_network_plot <- renderPlot({
+      req(input$submit_na)
       #plot(diffabun_res(), type = "logfc")
       print(na_network_plot())
     })
-  }, autoDestroy = FALSE)
+ # }, autoDestroy = FALSE)
     
-  observeEvent(input$submit_modules, {
+  #observeEvent(input$submit_modules, {
     # Network indices
     na_net_indc <<- reactive({
+      req(input$submit_modules)
       validate(need(exists(na_igraph()), "network graph object must be created first"))
       
       return(pmartRseq::network_indices(netGraph = na_igraph()))
@@ -1654,6 +1682,7 @@ shinyServer(function(input, output, session) {
     
     # Modules
     na_mods <<- reactive({
+      req(input$submit_modules)
       validate(need(length(input$na_cluster) == 1, "Need to specify a clustering algorithm to use"))
       validate(need(length(input$na_mod_size) == 1, "Need to specify a minimum module size"))
       
@@ -1661,24 +1690,28 @@ shinyServer(function(input, output, session) {
     })
     
     na_env <<- reactive({
+      req(input$submit_modules)
       validate(need(length(input$na_envvars) >= 1, "Need to specify environmental variables"))
       
       return(pmartRseq::mod_env(omicsData = normalized_data(), modData = na_mods(), envVars = input$na_envvars, pca.method="svd", cor.method="spearman", use="pairwise", padjust="BH"))
     })
     
     mod_plot <<- reactive({
+      req(input$submit_modules)
       validate(need(length(input$na_size) == 1, "Need to specify vertex size"))
       
       return(pmartRseq::network_plot(netGraph = na_igraph(), omicsData = normalized_data(), modData = na_mods(), colour = "Module", vsize = input$na_size, legend.show=TRUE, legend.pos = "bottomleft"))
     })
     
     output$na_mod_plot <- renderPlot({
+      req(input$submit_modules)
       print(mod_plot())
     })
-  },autoDestroy = FALSE)
+  #},autoDestroy = FALSE)
   
-  observeEvent(input$submit_envvars, {
+  #observeEvent(input$submit_envvars, {
     mod_env_plot <<- reactive({
+      req(input$submit_envvars)
       validate(need(length(input$env_pval) == 1, "Need to specify a p-value cutoff for module and environmental variable correlations"))
       
       return(plot(na_env(), pval.thresh=input$env_pval))
@@ -1686,11 +1719,12 @@ shinyServer(function(input, output, session) {
     
     # EnvVars Plot
     output$na_envvars_plot <- renderPlot({
+      req(input$submit_envvars)
       #plot(diffabun_res(), type = "logfc")
       print(mod_env_plot())
     })
     
-  },autoDestroy = FALSE)
+ # },autoDestroy = FALSE)
   
   ################ Download Tab #################
   output$files_to_download <- renderUI({

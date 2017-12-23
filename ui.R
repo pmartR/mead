@@ -354,7 +354,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
             inputId = "submit_da",
             label = "Submit"
               ),
-          DT::dataTableOutput("da_res"),
+          withSpinner(dataTableOutput("da_res")),
           verbatimTextOutput("da_summary"),
           plotOutput("flag_plot"),
           plotOutput("logfc_plot"),
@@ -369,7 +369,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
             inputId = "submit_is",
             label = "Submit"
           ),
-          DT::dataTableOutput("indsp_results"),
+          withSpinner(dataTableOutput("indsp_results")),
           verbatimTextOutput("indsp_summary"),
           uiOutput("indsp_xaxis"),
           uiOutput("indsp_group"),
@@ -399,7 +399,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
             inputId = "submit_pa",
             label = "Submit"
           ),
-          DT::dataTableOutput("pa_res"),
+          withSpinner(dataTableOutput("pa_res")),
           verbatimTextOutput("pa_summary"),
           plotOutput("pa_pval_plot"),
           plotOutput("pa_flag_plot")
@@ -431,7 +431,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
             inputId = "submit_na",
             label = "Submit"
           ),
-          plotOutput("na_network_plot"),
+          withSpinner(plotOutput("na_network_plot")),
           br(),
           hr(),
           h3("Modules"),
@@ -441,7 +441,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
             inputId = "submit_modules",
             label = "Submit Module Detection"
           ),
-          plotOutput("na_mod_plot"),
+          withSpinner(plotOutput("na_mod_plot")),
           br(),
           hr(),
           h3("Environmental Variables"),
@@ -451,7 +451,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
             inputId = "submit_envvars",
             label = "Submit Environmental Variables"
           ),
-          plotOutput("na_envvars_plot")
+          withSpinner(plotOutput("na_envvars_plot"))
           ),
  
  tabPanel("Download",
