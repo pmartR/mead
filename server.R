@@ -301,7 +301,7 @@ shinyServer(function(input, output, session) {
       isolate({
         filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filter$taxa[[input$taxa_filter_go]],
                                       omicsData = filtered_rRNA_obj,
-                                      taxa_keep = input$taxa_keep)
+                                      keep_taxa = input$keep_taxa)
       })
     }
     return(filtered_rRNA_obj)
@@ -329,7 +329,7 @@ shinyServer(function(input, output, session) {
       isolate({
         filt1 <<- pmartRseq::applyFilt(filter_object = filter$taxa[[input$taxa_filter_go]],
                                       omicsData = filt1,
-                                      taxa_keep = input$taxa_keep)
+                                      keep_taxa = input$keep_taxa)
       })
     }
     
@@ -347,7 +347,7 @@ shinyServer(function(input, output, session) {
     #               multiple = FALSE)
     # })
     # 
-    # taxa_keep = reactive({
+    # keep_taxa = reactive({
     #   # Create logical indicating the samples to keep, or dummy logical if nonsense input
     #   validate(
     #     need(!(is.null(groupDF()$e_meta)), message = "please import feature metadata")
@@ -363,7 +363,7 @@ shinyServer(function(input, output, session) {
     # output$keep_taxa <- renderUI({
     #     selectInput("keep_taxa",
     #                 label = "Which taxa to keep in the analysis",
-    #                 choices = c(taxa_keep),
+    #                 choices = c(keep_taxa),
     #                 multiple = TRUE)
     #   })
     
@@ -597,7 +597,7 @@ shinyServer(function(input, output, session) {
   output$keep_taxa <- renderUI({
       selectInput("keep_taxa",
                   label = "Which taxonomies to keep",
-                  choices = unique(groupDF()$e_meta[,2]),
+                  choices = unique(groupDF()$e_meta[,input$criteria]),
                   multiple = TRUE)
   })
   
@@ -616,7 +616,7 @@ shinyServer(function(input, output, session) {
     )
     if (input$taxa_filter_go == 0 & input$otu_filter_go == 0 & input$sample_filter_go == 0) {
       #table(taxa_filter_obj()[which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa),input$criteria])
-      #which(taxa_filter_obj()[,input$criteria] %in% input$taxa_keep)
+      #which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa)
       cat("This keeps ",length(which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa))," out of a possible ",nrow(taxa_filter_obj()), " features (roughly ", length(which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa))/nrow(taxa_filter_obj())*100,"%). This correlates to a total number of ",sum(taxa_filter_obj()$Sum[which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa)], na.rm=TRUE)," sequences kept out of a possible ",sum(taxa_filter_obj()$Sum, na.rm=TRUE)," sequences (roughly ",sum(taxa_filter_obj()$Sum[which(taxa_filter_obj()[,input$criteria] %in% input$keep_taxa)], na.rm=TRUE)/sum(taxa_filter_obj()$Sum, na.rm=TRUE)*100,"%).")
     } else {
       taxa_filter_obj <- pmartRseq::metadata_based_filter(omicsData = filtered_rRNA_obj, criteria = input$criteria)
