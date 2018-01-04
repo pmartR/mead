@@ -127,6 +127,12 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
                 tags$title(h4("Uploaded Data View"))
               )))
           ),
+          br(),
+          hr(),
+          h2("Taxonomic Level"),
+          uiOutput("rollup"),
+          br(),
+          hr(),
           h2("Groupings"),
           h3("Main Effects"),
           # fluidRow(

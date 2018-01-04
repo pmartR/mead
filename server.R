@@ -96,12 +96,28 @@ shinyServer(function(input, output, session) {
       return(tmp)
       
     })
+
+
+    output$rollup <- renderUI({
+      selectInput("rollup",
+                  label = "Which taxonomic level should analysis be performed at?",
+                  choices = c("Kingdom","Phylum","Class","Order","Family","Genus","Species",attr(rRNAobj(), "cnames")$edata_cname),
+                  selected = attr(rRNAobj(), "cnames")$edata_cname,
+                  multiple = FALSE)
+    })
     
+    rRNA_agg <- reactive({
+      validate(
+        need(length(input$rollup) == 1, "Need to specify a taxonomic level")
+      )
+      
+      return(pmartRseq::taxa_rollup(omicsData = rRNAobj(), level = input$rollup, taxa_levels = NULL))
+    })
     
     output$sample_data <- DT::renderDataTable(expr = 
-                                                data.frame(rRNAobj()$e_data), rownames = FALSE, class = 'cell-border stripe compact hover',
+                                                data.frame(rRNA_agg()$e_data), rownames = FALSE, class = 'cell-border stripe compact hover',
                                               options = list(columnDefs = list(list(
-                                                targets = c(1:(ncol((rRNAobj()$e_data)) - 1)),
+                                                targets = c(1:(ncol((rRNA_agg()$e_data)) - 1)),
                                                 render = JS(
                                                   "function(data, type, row, meta) {",
                                                   "return type === 'display' && data.length > 10 ?",
@@ -109,17 +125,18 @@ shinyServer(function(input, output, session) {
                                                   "}")
                                               ))), callback = JS('table.page(3).draw(false);'))
     
+    
     # ################ Group Designation Tab #################
     
     group_vars <- reactive({
-      intersect(which(lapply(apply(rRNAobj()$f_data, 2, function(z) table(z))[unlist(lapply(apply(rRNAobj()$f_data, 2, function(x) table(x)), function(y) any(is.finite(y))))], function(w) max(w)) > 2), which(apply(rRNAobj()$f_data, 2, function(v) length(unique(v))) >= 2))
+      intersect(which(lapply(apply(rRNA_agg()$f_data, 2, function(z) table(z))[unlist(lapply(apply(rRNA_agg()$f_data, 2, function(x) table(x)), function(y) any(is.finite(y))))], function(w) max(w)) > 2), which(apply(rRNA_agg()$f_data, 2, function(v) length(unique(v))) >= 2))
       
     })
     
     output$gdfMainEffect <- renderUI({
       selectInput("gdfMainEffect",
                   label = "Main Effect(s) to use for Groupings",
-                  choices = colnames(rRNAobj()$f_data)[group_vars()],
+                  choices = colnames(rRNA_agg()$f_data)[group_vars()],
                   multiple = TRUE)
     })
     
@@ -133,14 +150,14 @@ shinyServer(function(input, output, session) {
     #   output$cov1 <- renderUI({
     #     selectInput("cov1",
     #                 label = "Covariate 1",
-    #                 choices = c("NA",colnames(rRNAobj()$f_data)),
+    #                 choices = c("NA",colnames(rRNA_agg()$f_data)),
     #                 selected = NULL)
     #   })
     #   
     #   output$cov2 <- renderUI({
     #     selectInput("cov2",
     #                 label = "Covariate 2",
-    #                 choices = c("NA",colnames(rRNAobj()$f_data)),
+    #                 choices = c("NA",colnames(rRNA_agg()$f_data)),
     #                 selected = NULL)
     #     #groupDesignation
     #   })
@@ -160,7 +177,7 @@ shinyServer(function(input, output, session) {
         need(length(mainEffects) > 0, "There needs to be at least one grouping variable")
       )
       
-      return(pmartRseq::group_designation(rRNAobj(), main_effects = mainEffects))
+      return(pmartRseq::group_designation(rRNA_agg(), main_effects = mainEffects))
       
     })
     
@@ -516,7 +533,7 @@ shinyServer(function(input, output, session) {
       ))), callback = JS('table.page(3).draw(false);'))
   }) 
   observeEvent(input$metadata_reset_button, {
-    output$boxes <- renderUI({get_checkbox_output_list(rRNAobj()$f_data)})
+    output$boxes <- renderUI({get_checkbox_output_list(rRNA_agg()$f_data)})
   })
   
   # end sample metadata filtering
@@ -1766,8 +1783,8 @@ shinyServer(function(input, output, session) {
       rep <- list()
       if("raw" %in% input$files_to_download){
         fs <- c(fs, "raw.csv")
-        rep$data <- rRNAobj()
-        write.csv(rRNAobj()$e_data, file="raw.csv")
+        rep$data <- rRNA_agg()
+        write.csv(rRNA_agg()$e_data, file="raw.csv")
       }
       if("filtered" %in% input$files_to_download){
         fs <- c(fs, "filtered.csv")
