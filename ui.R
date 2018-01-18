@@ -119,6 +119,26 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
           #   )
           # ),
           # actionButton("Upload", "Upload ze data!"),
+          #-------- Guess which colnames are the proper identifiers --------#
+          h3("Selected Identifiers"),
+          fluidRow(
+            column(width = 6,
+                    h4("The selected expression data identifier is:"),
+                    h3(textOutput("e_data_cname"))),
+            column(width = 6,
+                   h4("The selected metadata identifier is:"),
+                   h3(textOutput("f_data_cname")))
+          ),
+          h4("If the selected identifiers are not correct, use the dropdowns below to change them"),
+          fluidRow(
+            column(width = 6, 
+            uiOutput("new_edata_cname")
+            ),
+            column(width = 6, 
+                   uiOutput("new_fdata_cname")
+            )
+          ),
+          hr(),
           h3("Data View"),
           fluidRow(
             column(width = 12, tags$table(

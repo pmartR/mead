@@ -51,6 +51,23 @@ shinyServer(function(input, output, session) {
     }
   }) #end rRNAobj import
   
+  # Guess at column identifiers
+  output$e_data_cname <- reactive(importObj()$guessed_edata_cname)
+  output$f_data_cname <- reactive(importObj()$guessed_fdata_cname)
+  
+  output$new_edata_cname <- renderUI({
+    selectInput(inputId = "new_e_data_cname", label = "New expression data identifier is:", 
+                choices = colnames(importObj()$e_data),
+                selected = importObj()$guessed_edata_cname,
+                               multiple = FALSE)
+  })
+  
+  output$new_fdata_cname <- renderUI({
+    selectInput(inputId = "new_f_data_cname", label = "New metadata identifier is:", 
+                choices = colnames(importObj()$f_data),
+                selected = importObj()$guessed_fdata_cname,
+                multiple = FALSE)
+  })
   # output$edata_cname <- renderUI({
   #   selectInput("edata_cname",
   #               label = "Identifier column name in data",
@@ -81,13 +98,15 @@ shinyServer(function(input, output, session) {
   
     rRNAobj <- reactive({
       validate(
-        need(importObj, message = "Please upload data files to begin analysis")
+        need(importObj, message = "Please upload data files to begin analysis"),
+        need(!is.null(importObj()$guessed_fdata_cname), message = "Please upload data files to begin analysis"),
+        need(!is.null(importObj()$guessed_edata_cname), message = "Please upload data files to begin analysis")
       )
       tmp <- pmartRseq::as.seqData(e_data = importObj()$e_data,
                                    f_data = importObj()$f_data,
                                    e_meta = importObj()$e_meta,
-                                   fdata_cname = importObj()$guessed_fdata_cname,
-                                   edata_cname = importObj()$guessed_edata_cname,
+                                   fdata_cname = input$new_f_data_cname,
+                                   edata_cname = input$new_e_data_cname,
                                    taxa_cname = importObj()$guessed_taxa_cname,
                                    data_type = "rRNA")
       
