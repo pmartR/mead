@@ -1,37 +1,3 @@
-# Get dependencies imported if any are missing
-#list of all packages
-packs <- installed.packages()[,"Package"]
-#list of required packages
-dependencies <- c("shiny", "shinyjs", "lazyeval", "V8", "dplyr", "DT", "ggplot2", "vegan", "goeveg", "plotly", "shinycssloaders")
-
-#check for missing packages
-missing <- dependencies[!(dependencies %in% packs)]
-
-#install missing ones
-if (length(missing) > 0) install.packages(missing, dependencies = TRUE)
-
-# add in custom packages
-if (!("filterWidget" %in% packs)) devtools::install("filterWidget")
-if (!("pmartRseq" %in% packs)) devtools::install("../../pmartRseq/")
-
-# source packages and functions
-library(shiny)
-library(shinyjs) 
-library(V8)
-library(lazyeval)
-library(dplyr)
-library(DT)
-library(filterWidget)
-library(ggplot2)
-library(pmartRseq)
-#library(phyloseq)
-library(vegan)
-library(goeveg)
-library(plotly)
-library(shinycssloaders)
-source("./functions/helper_functions.R")
-source("./functions/test_functions.R")
-
 kovera_k <- 0
 kovera_A <- 0
 source("./functions/helper_functions.R")
@@ -39,7 +5,7 @@ source("./functions/helper_functions.R")
 #list of all packages
 packs <- installed.packages()[,"Package"]
 #list of required packages
-dependencies <- c("shiny", "shinyjs", "lazyeval", "V8", "dplyr", "DT", "ggplot2", "vegan", "goeveg", "plotly", "DESeq2")
+dependencies <- c("shiny", "shinyjs", "lazyeval", "V8", "dplyr", "DT", "ggplot2", "vegan", "goeveg", "plotly", "DESeq2", "indicspecies", "ALDEx2", "fdrtool")
 
 #check for missing packages
 missing <- dependencies[!(dependencies %in% packs)]
@@ -53,6 +19,10 @@ if (!("pmartRseq" %in% packs)) devtools::install("../../pmartRseq/")
 if (!("DESeq2" %in% packs)){
   source("https://bioconductor.org/biocLite.R")
   biocLite("DESeq2")
+} 
+if (!("ALDEx2" %in% packs)){
+  source("https://bioconductor.org/biocLite.R")
+  biocLite("ALDEx2")
 } 
 
 # source packages and functions
@@ -68,8 +38,11 @@ library(pmartRseq)
 #library(phyloseq)
 library(vegan)
 library(goeveg)
+library(indicspecies)
 library(plotly)
 library(DESeq2)
+library(fdrtool)
+library(shinycssloaders)
 source("./functions/helper_functions.R")
 source("./functions/test_functions.R")
 # create a reset session button using a js method
