@@ -703,10 +703,9 @@ shinyServer(function(input, output, session) {
   
 
   
-  # ################ Outliers Tab #################
+  ################# Outliers Tab #################
   outlier_jaccard <- reactive({
     input$remove_outliers
-    #TODO: force the user to select a grouping before this will display
     jaqs <- pmartRseq::jaccard_calc(omicsData = filtered_data())
     jaqs$jaqsID <- jaqs[, attr(jaqs,"cname")$fdata_cname]
     return(jaqs)
@@ -716,6 +715,12 @@ shinyServer(function(input, output, session) {
     plot(outlier_jaccard())
   })
 
+  #define global plotly style
+  f <<- list(
+    family = "Courier New, monospace",
+    size = 18,
+    color = "#7f7f7f"
+  )  
   
   output$outlier_jaccard_plot <- renderPlotly({
     d <- event_data("plotly_selected")
@@ -727,9 +732,19 @@ shinyServer(function(input, output, session) {
       m <- outlier_jaccard()[outlier_jaccard()$jaqsID %in% d[["key"]], ]
       p <- add_markers(p, data = m, color = I("red"))
     }
-    layout(p, dragmode = "lasso", showlegend = FALSE)
+
+    
+    x <- list(
+      title = "",
+      titlefont = f
+    )
+    y <- list(
+      title = "Jaccard Dis/similarity",
+      titlefont = f
+    )
     p$elementId <- NULL
-    p
+    layout(p, dragmode = "lasso", showlegend = FALSE, xaxis = x, yaxis = y)
+    
   })
   
   selected_outliers <- reactive({
@@ -759,10 +774,16 @@ shinyServer(function(input, output, session) {
       m <- abundance()[abundance()$abundID %in% d[["key"]], ]
       p <- add_markers(p, data = m, color = I("red"))
     }
-    layout(p, dragmode = "lasso", showlegend = FALSE)
+    x <- list(
+      title = "",
+      titlefont = f
+    )
+    y <- list(
+      title = "Abundance",
+      titlefont = f
+    )
     p$elementId <- NULL
-    p
-  })
+    layout(p, dragmode = "lasso", showlegend = FALSE, xaxis = x, yaxis = y)  })
   
 
   output$outlier_richness_plot <- renderPlotly({
@@ -776,10 +797,16 @@ shinyServer(function(input, output, session) {
       m <- long_richness[long_richness$variable %in% d[["key"]], ]
       p <- add_markers(p, data = m, color = I("red"))
     }
-    layout(p, dragmode = "lasso", showlegend = FALSE)
+    x <- list(
+      title = "",
+      titlefont = f
+    )
+    y <- list(
+      title = "Richness",
+      titlefont = f
+    )
     p$elementId <- NULL
-    p
-  })
+    layout(p, dragmode = "lasso", showlegend = FALSE, xaxis = x, yaxis = y)  })
   
   outlier_filter_obj <- reactive({
     validate(
