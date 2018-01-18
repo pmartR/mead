@@ -715,7 +715,7 @@ shinyServer(function(input, output, session) {
   jac_plot_obj <- reactive({
     plot(outlier_jaccard())
   })
-  
+
   
   output$outlier_jaccard_plot <- renderPlotly({
     d <- event_data("plotly_selected")
@@ -728,6 +728,8 @@ shinyServer(function(input, output, session) {
       p <- add_markers(p, data = m, color = I("red"))
     }
     layout(p, dragmode = "lasso", showlegend = FALSE)
+    p$elementId <- NULL
+    p
   })
   
   selected_outliers <- reactive({
@@ -758,6 +760,8 @@ shinyServer(function(input, output, session) {
       p <- add_markers(p, data = m, color = I("red"))
     }
     layout(p, dragmode = "lasso", showlegend = FALSE)
+    p$elementId <- NULL
+    p
   })
   
 
@@ -773,6 +777,8 @@ shinyServer(function(input, output, session) {
       p <- add_markers(p, data = m, color = I("red"))
     }
     layout(p, dragmode = "lasso", showlegend = FALSE)
+    p$elementId <- NULL
+    p
   })
   
   outlier_filter_obj <- reactive({
@@ -819,14 +825,17 @@ shinyServer(function(input, output, session) {
                 choices = colnames(normalized_data()$e_meta)[-which(colnames(normalized_data()$e_meta)==attr(normalized_data(),"cnames")$edata_cname)])
   })
   
-  # norm_plot_obj <- reactive({
-  #   plot(normalized_data(), class=input$norm_class)
-  # })
+  norm_plot_obj <- reactive({
+    plot(normalized_data(), class=input$norm_class)
+  })
   # Try to make a stacked bar plot - not working right now
   output$norm_plot <- renderPlotly({
     #plot(normalized_data(), class="Phylum")
     #print(norm_plot_obj())
-    plotly::ggplotly( plot(normalized_data(), class=input$norm_class))
+    #plotly::ggplotly( plot(normalized_data(), class=input$norm_class))
+    p <- plotly::ggplotly(norm_plot_obj())
+    p$elementId <- NULL
+    p
   })
   
   # Calculate abundance on normalized data
@@ -855,7 +864,9 @@ shinyServer(function(input, output, session) {
   # Create a plot of raw abundance vs raw richness
   output$ra_raw <- renderPlotly({
     #plot(abun_raw(), rich_raw(), plot_title="Raw Data")
-    plotly::ggplotly(ra_raw_plot())
+    p <- plotly::ggplotly(ra_raw_plot())
+    p$elementId <- NULL
+    p
   })
   
   ra_norm_plot <- reactive({
@@ -864,7 +875,9 @@ shinyServer(function(input, output, session) {
   # Create a plot of normalized abundance vs normalized richness to see if there is a reduction in correlation
   output$ra_norm <- renderPlotly({
     #plot(abun_norm(), rich_norm(), plot_title="Normalized Data")
-    plotly::ggplotly(ra_norm_plot())
+    p <- plotly::ggplotly(ra_norm_plot())
+    p$elementId <- NULL
+    p
   })
   
   ################ Community Metrics Tab #################
@@ -910,7 +923,9 @@ shinyServer(function(input, output, session) {
   # Show alpha diversity plot
   output$adiv_plot <- renderPlotly({
     #plot(a_div(), x_axis=input$xaxis, color=input$color)
-   plotly::ggplotly(plot(a_div(), x_axis=input$xaxis, color=input$color, scales = 'free')) #ggplotly bugs without free scale
+  p <-  plotly::ggplotly(plot(a_div(), x_axis=input$xaxis, color=input$color, scales = 'free')) #ggplotly bugs without free scale
+  p$elementId <- NULL
+  p
   })
   
   output$adiv_summary <- renderPrint({
@@ -943,7 +958,9 @@ shinyServer(function(input, output, session) {
   # Show richness plot
   output$rich_plot <- renderPlotly({
     #plot(rich(), x_axis=input$xaxis, color=input$color)
-    plotly::ggplotly(rich_plot_obj())
+    p <- plotly::ggplotly(rich_plot_obj())
+    p$elementId <- NULL
+    p
   })
   
   output$rich_summary <- renderPrint({
@@ -967,7 +984,9 @@ shinyServer(function(input, output, session) {
   # Show evenness plot
   output$abun_plot <- renderPlotly({
     #plot(even(), x_axis=input$xaxis, color=input$color)
-    plotly::ggplotly(abun_plot_obj())
+    p <- plotly::ggplotly(abun_plot_obj())
+    p$elementId <- NULL
+    p
   })
   
   output$abun_summary <- renderPrint({
@@ -999,7 +1018,9 @@ shinyServer(function(input, output, session) {
   # Show evenness plot
   output$even_plot <- renderPlotly({
     #plot(even(), x_axis=input$xaxis, color=input$color)
-    plotly::ggplotly(even_plot_obj())
+    p <- plotly::ggplotly(even_plot_obj())
+    p$elementId <- NULL
+    p
   })
   
   output$even_summary <- renderPrint({
@@ -1023,7 +1044,9 @@ shinyServer(function(input, output, session) {
   # Show evenness plot
   output$effsp_plot <- renderPlotly({
     #plot(effsp(), x_axis=input$xaxis, color=input$color)
-    plotly::ggplotly(effsp_plot_obj())
+    p <- plotly::ggplotly(effsp_plot_obj())
+    p$elementId <- NULL
+    p
   })
   
   output$effsp_summary <- renderPrint({
