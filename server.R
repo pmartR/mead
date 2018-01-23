@@ -661,7 +661,12 @@ shinyServer(function(input, output, session) {
   })
 
   #------------ reactive filtered data for downstream processing --------------#
-  
+  #--------- outlier observer ---------#
+  observeEvent(input$remove_outliers,{
+    filters$outliers[[input$remove_outliers]] <- otu_filter_obj()
+    filtO <- pmartRseq::applyFilt(omicsData = filtered_rRNA_obj, outlier_filter_obj(), samps_to_remove =  outlier_jaccard()[outlier_jaccard()$jaqsID %in% selected_outliers()[["key"]], "jaqsID"])
+    filtered_rRNA_obj <<- filtO
+  })
   
   filtered_data <- reactive({
     input$metadata_filter_go
@@ -679,10 +684,10 @@ shinyServer(function(input, output, session) {
     # observe({
     #   filtered_rRNA_obj
     ################# JSON object for Meg #################
-    rRNA_filtered <- jsonlite::toJSON(list(filtered_rRNA_obj$e_data, filtered_rRNA_obj$e_meta, filtered_rRNA_obj$f_data))
+    #rRNA_filtered <- jsonlite::toJSON(list(filtered_rRNA_obj$e_data, filtered_rRNA_obj$e_meta, filtered_rRNA_obj$f_data))
     #   #write(rRNA_filtered, file = "rRNA_filtered.json")
     # })
-    return(isolate(filtered_rRNA_obj))
+    return(filtered_rRNA_obj)
   })
   
   
@@ -704,6 +709,9 @@ shinyServer(function(input, output, session) {
 
   
   ################# Outliers Tab #################
+  
+
+  
   outlier_jaccard <- reactive({
     input$remove_outliers
     jaqs <- pmartRseq::jaccard_calc(omicsData = filtered_data())
@@ -748,6 +756,7 @@ shinyServer(function(input, output, session) {
   })
   
   selected_outliers <- reactive({
+    input$remove_outliers
     event_data("plotly_selected")
   })
   
@@ -816,13 +825,6 @@ shinyServer(function(input, output, session) {
     return(pmartRseq::sample_based_filter(omicsData = filtered_rRNA_obj, fn = "criteria"))
   })
   
-  #--------- outlier observer ---------#
-  observeEvent(input$remove_outliers,{
-    filters$outliers[[input$remove_outliers]] <- otu_filter_obj()
-    filtO <- pmartRseq::applyFilt(omicsData = filtered_rRNA_obj, outlier_filter_obj(), samps_to_remove =  outlier_jaccard()[outlier_jaccard()$jaqsID %in% selected_outliers()[["key"]], "jaqsID"])
-    filtered_rRNA_obj <<- filtO
-  })
-  
   
   # ################ Normalization Tab #################
   
@@ -860,7 +862,7 @@ shinyServer(function(input, output, session) {
     #plot(normalized_data(), class="Phylum")
     #print(norm_plot_obj())
     #plotly::ggplotly( plot(normalized_data(), class=input$norm_class))
-    p <- plotly::ggplotly(norm_plot_obj())
+    p <- plotly::ggplotly(norm_plot_obj(), tooltip = c("x", "y", "fill"))
     p$elementId <- NULL
     p
   })
@@ -882,27 +884,28 @@ shinyServer(function(input, output, session) {
   
   # Calculate richness on raw data
   rich_raw <- reactive({
+    input$remove_outliers
     return(suppressWarnings(pmartRseq::richness_calc(filtered_data(), index="observed")))
   })
   
   ra_raw_plot <- reactive({
-    plot(abun_raw(), rich_raw(), plot_title="Raw Data")
+    plot(abun_raw(), rich_raw(), plot_title="Raw Data", samplabel = attr(normalized_data(),"cnames")$fdata_cname)
   })
   # Create a plot of raw abundance vs raw richness
   output$ra_raw <- renderPlotly({
     #plot(abun_raw(), rich_raw(), plot_title="Raw Data")
-    p <- plotly::ggplotly(ra_raw_plot())
+    p <- plotly::ggplotly(ra_raw_plot(), tooltip = c("x", "y","colour", "label"))
     p$elementId <- NULL
     p
   })
   
   ra_norm_plot <- reactive({
-    plot(abun_norm(), rich_norm(), plot_title="Normalized Data")
+    plot(abun_norm(), rich_norm(), plot_title="Normalized Data", samplabel = attr(normalized_data(),"cnames")$fdata_cname)
   })
   # Create a plot of normalized abundance vs normalized richness to see if there is a reduction in correlation
   output$ra_norm <- renderPlotly({
     #plot(abun_norm(), rich_norm(), plot_title="Normalized Data")
-    p <- plotly::ggplotly(ra_norm_plot())
+    p <- plotly::ggplotly(ra_norm_plot(), tooltip = c("x", "y", "colour", "label"))
     p$elementId <- NULL
     p
   })
@@ -945,12 +948,13 @@ shinyServer(function(input, output, session) {
   })
   
   adiv_plot_obj <- reactive({
-    plot(a_div(), x_axis=input$xaxis, color=input$color)
+    plot(a_div(), x_axis=input$xaxis, color=input$color, samplabel=input$new_f_data_cname)
   })
   # Show alpha diversity plot
   output$adiv_plot <- renderPlotly({
     #plot(a_div(), x_axis=input$xaxis, color=input$color)
-  p <-  plotly::ggplotly(plot(a_div(), x_axis=input$xaxis, color=input$color, scales = 'free')) #ggplotly bugs without free scale
+  p <-  plotly::ggplotly(plot(a_div(), x_axis=input$xaxis, color=input$color, scales = 'free', samplabel = attr(normalized_data(),"cnames")$fdata_cname),
+                         tooltip = c("x", "y", "label")) #ggplotly bugs without free scale
   p$elementId <- NULL
   p
   })
@@ -980,12 +984,12 @@ shinyServer(function(input, output, session) {
   })
   
   rich_plot_obj <- reactive({
-    plot(rich(), x_axis=input$xaxis, color=input$color, scales = 'free')#ggplotly bugs without free scale
+    plot(rich(), x_axis=input$xaxis, color=input$color, scales = 'free', samplabel = attr(normalized_data(),"cnames")$fdata_cname)#ggplotly bugs without free scale
   })
   # Show richness plot
   output$rich_plot <- renderPlotly({
     #plot(rich(), x_axis=input$xaxis, color=input$color)
-    p <- plotly::ggplotly(rich_plot_obj())
+    p <- plotly::ggplotly(rich_plot_obj(), tooltip = c("x", "y", "label"))
     p$elementId <- NULL
     p
   })
@@ -1006,12 +1010,12 @@ shinyServer(function(input, output, session) {
   })
   
   abun_plot_obj <- reactive({
-    plot(abun(), x_axis=input$xaxis, color=input$color)
+    plot(abun(), x_axis=input$xaxis, color=input$color,  samplabel = attr(normalized_data(),"cnames")$fdata_cname)
   })
   # Show evenness plot
   output$abun_plot <- renderPlotly({
     #plot(even(), x_axis=input$xaxis, color=input$color)
-    p <- plotly::ggplotly(abun_plot_obj())
+    p <- plotly::ggplotly(abun_plot_obj(), tooltip = c("x", "y", "label"))
     p$elementId <- NULL
     p
   })
@@ -1040,12 +1044,12 @@ shinyServer(function(input, output, session) {
   })
   
   even_plot_obj <- reactive({
-    plot(even(), x_axis=input$xaxis, color=input$color, scales = 'free')#ggplotly bugs without free scale
+    plot(even(), x_axis=input$xaxis, color=input$color, scales = 'free',  samplabel = attr(normalized_data(),"cnames")$fdata_cname)#ggplotly bugs without free scale
   })
   # Show evenness plot
   output$even_plot <- renderPlotly({
     #plot(even(), x_axis=input$xaxis, color=input$color)
-    p <- plotly::ggplotly(even_plot_obj())
+    p <- plotly::ggplotly(even_plot_obj(), tooltip = c("x", "y", "label"))
     p$elementId <- NULL
     p
   })
@@ -1066,12 +1070,12 @@ shinyServer(function(input, output, session) {
   })
   
   effsp_plot_obj <- reactive({
-    plot(effsp(), x_axis=input$xaxis, color=input$color)
+    plot(effsp(), x_axis=input$xaxis, color=input$color, samplabel = attr(normalized_data(),"cnames")$fdata_cname)
   })
   # Show evenness plot
   output$effsp_plot <- renderPlotly({
     #plot(effsp(), x_axis=input$xaxis, color=input$color)
-    p <- plotly::ggplotly(effsp_plot_obj())
+    p <- plotly::ggplotly(effsp_plot_obj(), tooltip = c("x", "y", "label"))
     p$elementId <- NULL
     p
   })
