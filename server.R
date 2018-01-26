@@ -253,7 +253,7 @@ shinyServer(function(input, output, session) {
     filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
                                    omicsData = filtered_rRNA_obj,
                                    num_samps = input$filter_kOverA_sample_threshold,
-                                   upper_lim = input$filter_kOverA_count_threshold)  
+                                   upper_lim = input$filter_count_threshold)  
   })
   observeEvent(input$sample_filter_go, {
     filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$sample[[input$sample_filter_go]],
@@ -355,7 +355,7 @@ shinyServer(function(input, output, session) {
         filt1 <<- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
                                       omicsData = groupDF(),
                                       num_samps = input$filter_kOverA_sample_threshold,
-                                      upper_lim = input$filter_kOverA_count_threshold)  
+                                      upper_lim = input$filter_count_threshold)  
       })
     }
     
@@ -443,7 +443,7 @@ shinyServer(function(input, output, session) {
         filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
                                       omicsData = filtered_rRNA_obj,
                                       num_samps = input$filter_kOverA_sample_threshold,
-                                      upper_lim = input$filter_kOverA_count_threshold)  
+                                      upper_lim = input$filter_count_threshold)  
         
       })
     }
@@ -574,8 +574,13 @@ shinyServer(function(input, output, session) {
     })
     
     output$filter_ui_kOverA_k <- renderUI({
-      numericInputRow("filter_kOverA_sample_threshold", "",
-                      min = 1, max = maxSamples(), value = kovera_k, step = 1)
+      if (input$count_filter_fun == "ka") {
+        return(numericInputRow("filter_kOverA_sample_threshold", "in",
+                        min = 1, max = maxSamples(), value = kovera_k, step = 1))
+      } else {
+        return(NULL)
+      }
+      
     })
   })
   
@@ -583,19 +588,26 @@ shinyServer(function(input, output, session) {
     validate(
       need(length(filtered_rRNA_obj) > 0 , message = "Upload data first")
     )
-    return(pmartRseq::count_based_filter(groupDF(), fn = "ka"))
+    return(pmartRseq::count_based_filter(groupDF(), fn = input$count_filter_fun))
   })
+  
   
   output$read_counts_plot <- renderPlot({
     validate(
-      need( input$filter_kOverA_count_threshold >= 0, message = "Enter a count minimum >= 0"),
+      need( input$filter_count_threshold >= 0, message = "Enter a count minimum >= 0"),
       need( input$filter_kOverA_sample_threshold >= 0, message = "Enter a sample minimum >= 0")
     )
     if (input$sample_filter_go == 0 & input$otu_filter_go == 0 & input$taxa_filter_go == 0) {
-      plot(otu_filter_obj(), min_num = input$filter_kOverA_count_threshold, min_samp = input$filter_kOverA_sample_threshold)
+      plot(otu_filter_obj(), min_num = input$filter_count_threshold, min_samp = input$filter_kOverA_sample_threshold)
     } else{
-      otu_filt_obj <- pmartRseq::count_based_filter(filtered_rRNA_obj, fn = "ka")
-      plot(otu_filt_obj, min_num = input$filter_kOverA_count_threshold, min_samp = input$filter_kOverA_sample_threshold)
+      otu_filt_obj <- pmartRseq::count_based_filter(filtered_rRNA_obj, fn = input$count_filter_fun)
+      if (input$count_filter_fun == "ka") {
+        plot(otu_filt_obj, min_num = input$filter_count_threshold, min_samp = input$filter_kOverA_sample_threshold)
+      }
+      if (input$count_filter_fun != "ka") {
+        plot(otu_filt_obj, min_num = input$filter_count_threshold)
+      }
+      
       
     }
   })
