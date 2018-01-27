@@ -200,17 +200,18 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
              column(width = 4,
                     verbatimTextOutput("summ_filt")
              ),
-             column(width = 4, 
+             column(width = 4,
+                    radioButtons(inputId = "count_filter_fun", label = "Choose filter type:",
+                                 choices = list("mean", "percent", "max", "sum", "nonmiss", "ka"),
+                                 selected = "mean", inline = TRUE),
                     h4("OTU Counts Per Sample"),
-                    p("Keep OTUs with a minimum number of counts per sample"),
+                    p("Keep OTUs with some minimum number of counts"),
                     fluidRow(
-                      column(width = 3, h5("Keep OTUs with more than"), align = 'center'),
-                      column(width = 2,  numericInputRow("filter_kOverA_count_threshold", "",
+                      column(width = 3, h5("Keep OTU Threshold"), align = 'center'),
+                      column(width = 2,  numericInputRow("filter_count_threshold", "",
                                                          value = kovera_A, min = 0, step = 1)),
-                      column(width = 3, h5("counts in at least")),
-                      column(width = 2, uiOutput("filter_ui_kOverA_k")),
-                      column(width = 2, h5("samples"))
-                    ),
+                      column(width = 2, uiOutput("filter_ui_kOverA_k"))
+                      ),
                     br(),
                     plotOutput("read_counts_plot"),
                     fluidRow(
