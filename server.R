@@ -594,8 +594,8 @@ shinyServer(function(input, output, session) {
   
   output$read_counts_plot <- renderPlot({
     validate(
-      need( input$filter_count_threshold >= 0, message = "Enter a count minimum >= 0"),
-      need( input$filter_kOverA_sample_threshold >= 0, message = "Enter a sample minimum >= 0")
+      need( input$filter_count_threshold >= 0, message = "Enter a count minimum >= 0")
+      #need( input$filter_kOverA_sample_threshold >= 0, message = "Enter a sample minimum >= 0")
     )
     if (input$sample_filter_go == 0 & input$otu_filter_go == 0 & input$taxa_filter_go == 0) {
       plot(otu_filter_obj(), min_num = input$filter_count_threshold, min_samp = input$filter_kOverA_sample_threshold)
