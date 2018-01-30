@@ -110,7 +110,11 @@ shinyServer(function(input, output, session) {
                                    taxa_cname = importObj()$guessed_taxa_cname,
                                    data_type = "rRNA")
       
-      tmp <- pmartRseq::split_emeta(tmp, cname=attr(tmp,"cnames")$edata_cname, split1=NULL, numcol=7, split2="__", num=2, newnames=NULL)
+      if(ncol(tmp$e_meta) <= 2){
+        tmp <- pmartRseq::split_emeta(tmp, cname=attr(tmp,"cnames")$taxa_cname, split1=",", numcol=7, split2="__", num=2, newnames=NULL)
+      }else{
+        tmp <- pmartRseq::split_emeta(tmp, cname=attr(tmp,"cnames")$edata_cname, split1=NULL, numcol=7, split2="__", num=2, newnames=NULL)
+      }
       
       return(tmp)
       
