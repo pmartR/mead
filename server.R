@@ -674,13 +674,23 @@ shinyServer(function(input, output, session) {
 
   #------------ reactive filtered data for downstream processing --------------#
   #--------- outlier observer ---------#
-  observeEvent(input$remove_outliers,{
-    filters$outliers[[input$remove_outliers]] <- otu_filter_obj()
+  outlier_filter_obj <- reactive({
+    validate(
+      need(length(filtered_rRNA_obj) > 0 , message = "Upload data first"),
+      need(!is.null(groupDF()), message = "Need group designation first")
+    )
+    return(pmartRseq::sample_based_filter(omicsData = filtered_rRNA_obj, fn = "criteria"))
+  })
+  
+  observeEvent(input$remove_outliers, priority = 2, {
+    filters$outliers[[input$remove_outliers]] <- outlier_filter_obj()
     filtO <- pmartRseq::applyFilt(omicsData = filtered_rRNA_obj, outlier_filter_obj(), samps_to_remove =  outlier_jaccard()[outlier_jaccard()$jaqsID %in% selected_outliers()[["key"]], "jaqsID"])
     filtered_rRNA_obj <<- filtO
   })
   
   filtered_data <- reactive({
+    event_data("plotly_selected")
+    input$gdfMainEffect
     input$metadata_filter_go
     input$metadata_reset_button
     input$sample_filter_go
@@ -690,15 +700,6 @@ shinyServer(function(input, output, session) {
     input$taxa_filter_go
     input$taxa_reset_button
     input$remove_outliers
-    # print("removing outliers")
-    # print(filtered_rRNA_obj$e_data)
-
-    # observe({
-    #   filtered_rRNA_obj
-    ################# JSON object for Meg #################
-    #rRNA_filtered <- jsonlite::toJSON(list(filtered_rRNA_obj$e_data, filtered_rRNA_obj$e_meta, filtered_rRNA_obj$f_data))
-    #   #write(rRNA_filtered, file = "rRNA_filtered.json")
-    # })
     return(filtered_rRNA_obj)
   })
   
@@ -725,7 +726,7 @@ shinyServer(function(input, output, session) {
 
   
   outlier_jaccard <- reactive({
-    input$remove_outliers
+    event_data("plotly_selected")
     jaqs <- pmartRseq::jaccard_calc(omicsData = filtered_data())
     jaqs$jaqsID <- jaqs[, attr(jaqs,"cname")$fdata_cname]
     return(jaqs)
@@ -779,6 +780,7 @@ shinyServer(function(input, output, session) {
   
   
   abundance <- reactive({
+    event_data("plotly_selected")
     input$remove_outliers
     abundances <- abundance_calc(omicsData = filtered_data())
     abundances$abundID <- rownames(abundances)
@@ -829,13 +831,7 @@ shinyServer(function(input, output, session) {
     p$elementId <- NULL
     layout(p, dragmode = "lasso", showlegend = FALSE, xaxis = x, yaxis = y)  })
   
-  outlier_filter_obj <- reactive({
-    validate(
-      need(length(filtered_rRNA_obj) > 0 , message = "Upload data first"),
-      need(!is.null(groupDF()), message = "Need group designation first")
-    )
-    return(pmartRseq::sample_based_filter(omicsData = filtered_rRNA_obj, fn = "criteria"))
-  })
+
   
   
   # ################ Normalization Tab #################
@@ -886,6 +882,7 @@ shinyServer(function(input, output, session) {
   
   # Calculate abundance on raw data
   abun_raw <- reactive({
+    event_data("plotly_selected")
     return(suppressWarnings(pmartRseq::abundance_calc(filtered_data())))
   })
   
@@ -896,6 +893,7 @@ shinyServer(function(input, output, session) {
   
   # Calculate richness on raw data
   rich_raw <- reactive({
+    event_data("plotly_selected")
     input$remove_outliers
     return(suppressWarnings(pmartRseq::richness_calc(filtered_data(), index="observed")))
   })
