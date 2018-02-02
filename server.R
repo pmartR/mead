@@ -110,7 +110,11 @@ shinyServer(function(input, output, session) {
                                    taxa_cname = importObj()$guessed_taxa_cname,
                                    data_type = "rRNA")
       
-      tmp <- pmartRseq::split_emeta(tmp, cname=attr(tmp,"cnames")$edata_cname, split1=NULL, numcol=7, split2="__", num=2, newnames=NULL)
+      if(ncol(tmp$e_meta) <= 2){
+        tmp <- pmartRseq::split_emeta(tmp, cname=attr(tmp,"cnames")$taxa_cname, split1=",", numcol=7, split2="__", num=2, newnames=NULL)
+      }else{
+        tmp <- pmartRseq::split_emeta(tmp, cname=attr(tmp,"cnames")$edata_cname, split1=NULL, numcol=7, split2="__", num=2, newnames=NULL)
+      }
       
       return(tmp)
       
@@ -594,8 +598,8 @@ shinyServer(function(input, output, session) {
   
   output$read_counts_plot <- renderPlot({
     validate(
-      need( input$filter_count_threshold >= 0, message = "Enter a count minimum >= 0"),
-      need( input$filter_kOverA_sample_threshold >= 0, message = "Enter a sample minimum >= 0")
+      need( input$filter_count_threshold >= 0, message = "Enter a count minimum >= 0")
+      #need( input$filter_kOverA_sample_threshold >= 0, message = "Enter a sample minimum >= 0")
     )
     if (input$sample_filter_go == 0 & input$otu_filter_go == 0 & input$taxa_filter_go == 0) {
       plot(otu_filter_obj(), min_num = input$filter_count_threshold, min_samp = input$filter_kOverA_sample_threshold)
@@ -840,14 +844,14 @@ shinyServer(function(input, output, session) {
   output$normFunc <- renderUI({
     selectInput("normFunc",
                 label = "Normalization Function",
-                choices = c("percentile","tss","rarefy","poisson","deseq","tmm","css","none"),
+                choices = c("percentile","tss","rarefy","poisson","deseq","tmm","css","log","clr","none"),
                 selected = "css")
   })
   
   # Create normalized data
   normalized_data <- reactive({
     validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
-    validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css","none"), "Normalization function must be one of the options specified."))
+    validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css","log","clr","none"), "Normalization function must be one of the options specified."))
     
     #return(pmartRseq::split_emeta(pmartRseq::normalize_data(omicsData=filtered_data(), norm_fn=input$normFunc, normalize=TRUE), cname="OTU", split1=NULL, numcol=7, split2="__", num=2, newnames=NULL))
     return(pmartRseq::normalize_data(omicsData=filtered_data(), norm_fn=input$normFunc, normalize=TRUE))
@@ -1312,7 +1316,7 @@ shinyServer(function(input, output, session) {
     # Calculate normalization factors to use in differential abundance test - will use the same that was used on normalization tab
     norm_factors <- reactive({
       validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
-      validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css","none"), "Normalization function must be one of the options specified."))
+      validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css","log","clr","none"), "Normalization function must be one of the options specified."))
       
       return(pmartRseq::normalize_data(omicsData=filtered_data(), norm_fn=input$normFunc, normalize=FALSE))
     })
@@ -1332,7 +1336,11 @@ shinyServer(function(input, output, session) {
       validate(need(length(input$da_index) == 1, "Need to specify a differential abundance test"))
       validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
       
-      return(pmartRseq::countSTAT(omicsData = filtered_data(), norm_factors = norm_factors()$scale_param, comparisons = comps(), control = NULL, test = input$da_index, pval_adjust = input$pval_adjust, pval_thresh = 0.05))
+      if(input$normFunc %in% c("rarefy","log","clr")){
+        return(pmartRseq::countSTAT(omicsData = normalized_data(), norm_factors = norm_factors()$scale_param, comparisons = comps(), control = NULL, test = input$da_index, pval_adjust = input$pval_adjust, pval_thresh = 0.05))
+      }else{
+        return(pmartRseq::countSTAT(omicsData = filtered_data(), norm_factors = norm_factors()$scale_param, comparisons = comps(), control = NULL, test = input$da_index, pval_adjust = input$pval_adjust, pval_thresh = 0.05))
+      }
       
     })
     
