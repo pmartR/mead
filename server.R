@@ -1247,7 +1247,36 @@ shinyServer(function(input, output, session) {
       pmartRseq::pmartRseq_NMDS(res = vegmds(), omicsData = normalized_data(), grp = input$ord_colors, k = input$k, 
                                 x_axis = input$ord_x, y_axis = input$ord_y, ellipses=input$ellipses)
     })
+    
   })
+  
+
+  
+  # observeEvent(input$submit_adonis, {
+  #   # grp <- reactive({
+  #   #   validate(
+  #   #     need(length(input$beta_index) == 1, "There needs to be one beta diversity index.")
+  #   #   )
+  #   #   
+  #   #   return(grp)
+  #   # })
+  #   
+  #   output$beta_stats <- renderPrint({
+  #     validate(
+  #       need(length(input$beta_index) == 1, "There needs to be one beta diversity index.")
+  #     )
+  #     # validate(
+  #     #   need(length(grp()) >= 1, "There needs to be a grouping variable")
+  #     # )
+  #     validate(
+  #       need(length(vegdata()) >= 1, "Need vegdata")
+  #     )
+  #     #grp <- attr(normalized_data(), "group_DF")[match(rownames(vegdata()), attr(normalized_data(), "group_DF")[,attr(normalized_data(), "cnames")$fdata_cname]), "Group"]
+  #     
+  #     adonis2(t(vegdata()) ~ attr(normalized_data(), "group_DF")[match(rownames(vegdata()), attr(normalized_data(), "group_DF")[,attr(normalized_data(), "cnames")$fdata_cname]), "Group"], permutations=999, distance=input$beta_index)
+  #   })
+  # })
+  
     # Plot showing beta diversity
     output$ord_plot <- renderPlot({
       #if(input$ord_method == "NMDS"){
@@ -1264,7 +1293,6 @@ shinyServer(function(input, output, session) {
       # }
     })
 
-  
   
   ################ Differential Abundance Tab #################
   #----------- differential abundance ----------#
@@ -1379,7 +1407,7 @@ shinyServer(function(input, output, session) {
     })
     
     plot_all_da_obj <<- reactive({
-      pmartRseq::plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2", x_lab = "Phylum")
+      pmartRseq::plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "Phylum", x_lab = "Phylum")
     })
     # Plot showing log fold changes and p-values of all features, grouped by taxonomy
     output$plot_all_da <- renderPlot({

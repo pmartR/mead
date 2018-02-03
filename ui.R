@@ -341,6 +341,12 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
            #DT::dataTableOutput("beta"),
            #DT::dataTableOutput("mydist"),
            withSpinner(plotOutput("ord_plot"))
+           # actionButton(
+           #   inputId = "submit_adonis",
+           #   label = "Submit Stats"
+           # ),
+           # verbatimTextOutput("beta_stats")
+
   ),
  
  tabPanel("Differential Abundance",
