@@ -1454,7 +1454,7 @@ shinyServer(function(input, output, session) {
     
     indsp_plot_obj <<- reactive({
       validate(need(!is.null(indsp_res()), message = "Sumbit analysis"),
-               need(!is.null(input$indsp_xaxis), message = "Getting x-axis"))
+               need(!is.null(input$indsp_xaxis), message = "Please wait...getting x-axis together"))
       pmartRseq::plot_indsp(indsp = indsp_res(), omicsData = normalized_data(), x_axis = , group = input$indsp_group)
     })
     output$indsp_plot <- renderPlotly({
