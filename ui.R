@@ -5,13 +5,7 @@ source("./functions/helper_functions.R")
 #list of all packages
 packs <- installed.packages()[,"Package"]
 #list of required packages
-dependencies <- c("shiny", "shinyjs", "lazyeval", "V8", "dplyr", "DT", "ggplot2", "vegan", "goeveg", "plotly", "DESeq2", "indicspecies", "ALDEx2", "fdrtool")
-
-#check for missing packages
-missing <- dependencies[!(dependencies %in% packs)]
-
-#install missing ones
-if (length(missing) > 0) install.packages(missing, dependencies = TRUE)
+dependencies <- c("shiny", "shinyjs", "lazyeval", "V8", "dplyr", "DT", "ggplot2", "vegan", "goeveg", "plotly", "DESeq2", "edgeR", "indicspecies", "ALDEx2", "fdrtool")
 
 # add in custom packages and installs
 if (!("filterWidget" %in% packs)) devtools::install("filterWidget")
@@ -20,10 +14,20 @@ if (!("DESeq2" %in% packs)){
   source("https://bioconductor.org/biocLite.R")
   biocLite("DESeq2")
 } 
+if (!("edgeR" %in% packs)){
+  source("https://bioconductor.org/biocLite.R")
+  biocLite("edgeR")
+} 
 if (!("ALDEx2" %in% packs)){
   source("https://bioconductor.org/biocLite.R")
   biocLite("ALDEx2")
 } 
+
+#check for missing packages
+missing <- dependencies[!(dependencies %in% packs)]
+
+#install missing ones
+if (length(missing) > 0) install.packages(missing, dependencies = TRUE)
 
 # source packages and functions
 library(shiny)
@@ -340,7 +344,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
            uiOutput("ellipses"),
            #DT::dataTableOutput("beta"),
            #DT::dataTableOutput("mydist"),
-           withSpinner(plotOutput("ord_plot"))
+           withSpinner(plotlyOutput("ord_plot"))
   ),
  
  tabPanel("Differential Abundance",
@@ -373,7 +377,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
           verbatimTextOutput("indsp_summary"),
           uiOutput("indsp_xaxis"),
           uiOutput("indsp_group"),
-          plotOutput("indsp_plot")
+          plotlyOutput("indsp_plot")
   ),
  
  tabPanel("Statistics Results",

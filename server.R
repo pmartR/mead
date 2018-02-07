@@ -37,14 +37,18 @@ shinyServer(function(input, output, session) {
     validate(
       need(input$f_data != "", "Please select a sample metadata file")
     )
+    if (!grepl(pattern = "\\.biom$", x = input$e_data$datapath)) {
+      validate(need(input$e_meta != "", message = "Please upload feature metadata file"))
+    }
+    
     # check for e_meta file
-    if (is.null(input$e_meta$name)) {
+    if (is.null(input$e_meta$name) & grepl(".biom", as.character(input$e_data$name))) {
       return(pmartRseq::import_seqData(e_data_filepath = as.character(input$e_data$datapath),
                                        f_data_filepath = as.character(input$f_data$datapath),
              e_meta_filepath = NULL))
     }
     # import e_meta if there is one
-    if (!is.null(input$e_meta$name)) {
+    if (!is.null(input$e_meta$name) & !grepl(".biom", as.character(input$e_data$name))) {
       return(pmartRseq::import_seqData(e_data_filepath = as.character(input$e_data$datapath),
                                        f_data_filepath = as.character(input$f_data$datapath),
                                        e_meta_filepath = as.character(input$e_meta$datapath)))
@@ -100,7 +104,9 @@ shinyServer(function(input, output, session) {
       validate(
         need(importObj, message = "Please upload data files to begin analysis"),
         need(!is.null(importObj()$guessed_fdata_cname), message = "Please upload data files to begin analysis"),
-        need(!is.null(importObj()$guessed_edata_cname), message = "Please upload data files to begin analysis")
+        need(!is.null(importObj()$guessed_edata_cname), message = "Please upload data files to begin analysis"),
+        need(!is.null(importObj()$guessed_taxa_cname), message = "Please upload data files to begin analysis"),
+        need(!is.null(input$new_f_data_cname), message = "Please upload data files to begin analysis")
       )
       tmp <- pmartRseq::as.seqData(e_data = importObj()$e_data,
                                    f_data = importObj()$f_data,
@@ -1247,7 +1253,7 @@ shinyServer(function(input, output, session) {
     })
   })
     # Plot showing beta diversity
-    output$ord_plot <- renderPlot({
+    output$ord_plot <- renderPlotly({
       #if(input$ord_method == "NMDS"){
       # pmartRseq::pmartRseq_NMDS(res = vegmds(), 
       #           grp = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]),ellipses=input$ellipses)
@@ -1255,7 +1261,11 @@ shinyServer(function(input, output, session) {
       #                         x_axis = input$ord_x, y_axis = input$ord_y, ellipses=input$ellipses)
       req(input$submit_ord)
       #Sys.sleep(5)
-      print(ord_plot_obj())
+      #print(ord_plot_obj())
+      m <- ord_plot_obj() + theme(aspect.ratio=NULL)
+      p <- plotly::ggplotly(m, height = "100%", width = "100%")
+      p$elementId <- NULL
+      p
       # }else if(input$ord_method == "PCA"){
       #   mead_PCA(XX = vegmds(),
       #            ZZ = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]))
@@ -1443,12 +1453,18 @@ shinyServer(function(input, output, session) {
     })
     
     indsp_plot_obj <<- reactive({
-      pmartRseq::plot_indsp(indsp = indsp_res(), omicsData = normalized_data(), x_axis = input$indsp_xaxis, group = input$indsp_group)
+      validate(need(!is.null(indsp_res()), message = "Sumbit analysis"),
+               need(!is.null(input$indsp_xaxis), message = "Getting x-axis"))
+      pmartRseq::plot_indsp(indsp = indsp_res(), omicsData = normalized_data(), x_axis = , group = input$indsp_group)
     })
-    output$indsp_plot <- renderPlot({
+    output$indsp_plot <- renderPlotly({
+      validate(need(!is.null(indsp_plot_obj()), message = "Sumbit analysis"))
       req(input$submit_is)
       #pmartRseq::plot_indsp(indsp = indsp_res(), omicsData = normalized_data(), x_axis = input$indsp_xaxis, group = input$indsp_group)
-      print(indsp_plot_obj())
+      m <- indsp_plot_obj()+theme(axis.text.y = element_blank(), aspect.ratio=NULL)
+      p <- plotly::ggplotly(m, tooltip = c("x", "y", "fill"), width = "100%", height = "100%")
+      p$elementId <- NULL
+      p
     })
   #}, autoDestroy = FALSE)
   
