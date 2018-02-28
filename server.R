@@ -187,7 +187,7 @@ shinyServer(function(input, output, session) {
                                         "Max Across Samples"=max(value, na.rm=TRUE),
                                         "Min Across Samples"=min(value, na.rm=TRUE),
                                         "Sum Across Samples"=sum(value, na.rm=TRUE),
-                                        "Percentage of Total"=sum(value,na.rm=TRUE)/unique(Tot))
+                                        "Percentage of Total"=sum(value,na.rm=TRUE)/unique(Tot)*100)
       return(temp)
 
     })
@@ -200,7 +200,7 @@ shinyServer(function(input, output, session) {
                                                   "return type === 'display' && data.length > 10 ?",
                                                   "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
                                                   "}")
-                                              )), pageLength=5), callback = JS('table.page(3).draw(false);'))
+                                              )), pageLength=5, order=list(3, 'desc')), callback = JS('table.page(3).draw(false);'))
 
 
     # ################ Group Designation Tab #################
