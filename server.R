@@ -1463,13 +1463,22 @@ shinyServer(function(input, output, session) {
                 value = 0.05)
   })
 
+  output$is_max_grp <- renderUI({
+    numericInput("is_max_grp",
+                 label = "Maximum group size combinations",
+                 min = 1,
+                 max = (length(unique(attr(normalized_data(),"group_DF")$Group)) - 1),
+                 step = 1,
+                 value = (length(unique(attr(normalized_data(),"group_DF")$Group)) - 1))
+  })
+
   #observeEvent(input$submit_is, {
     indsp_res <<- reactive({
       req(input$submit_is)
       if(input$within == "NA"){
-        return(pmartRseq::indsp_calc(omicsData = normalized_data(), within = NULL, pval_thresh = input$is_pval_thresh))
+        return(pmartRseq::indsp_calc(omicsData = normalized_data(), within = NULL, pval_thresh = input$is_pval_thresh, max_grp = input$is_max_grp))
       }else{
-        return(pmartRseq::indsp_calc(omicsData = normalized_data(), within = input$within, pval_thresh = input$is_pval_thresh))
+        return(pmartRseq::indsp_calc(omicsData = normalized_data(), within = input$within, pval_thresh = input$is_pval_thresh, max_grp = input$is_max_grp))
       }
     })
 
