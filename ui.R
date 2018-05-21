@@ -5,7 +5,7 @@ source("./functions/helper_functions.R")
 #list of all packages
 packs <- installed.packages()[,"Package"]
 #list of required packages
-dependencies <- c("shiny", "shinyjs", "lazyeval", "V8", "dplyr", "DT", "ggplot2", "vegan", "goeveg", "plotly", "DESeq2", "edgeR", "indicspecies", "ALDEx2", "fdrtool")
+dependencies <- c("shiny", "shinyjs", "lazyeval", "V8", "dplyr", "DT", "ggplot2", "vegan", "goeveg", "plotly", "DESeq2", "edgeR", "indicspecies", "ALDEx2", "fdrtool", "reshape2", "shinycssloaders")
 
 # add in custom packages and installs
 if (!("filterWidget" %in% packs)) devtools::install("filterWidget")
@@ -47,12 +47,14 @@ library(plotly)
 library(DESeq2)
 library(fdrtool)
 library(shinycssloaders)
+library(reshape2)
 source("./functions/helper_functions.R")
 source("./functions/test_functions.R")
 # create a reset session button using a js method
 jsResetCode <- "shinyjs.reset = function() {history.go(0)}"
 shinyUI(navbarPage(title = (windowTitle = "mead"),
-
+                   footer = tags$footer(title = "footer text", align = "right", 
+                                        style = "position:relative; bottom:0; width:100%; height:100px; color:white; padding:10px; background-color:white;"),
 
 
 

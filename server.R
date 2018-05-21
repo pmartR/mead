@@ -175,7 +175,7 @@ shinyServer(function(input, output, session) {
       temp <- rRNA_agg()$e_meta
       names <- c("Kingdom","Phylum","Class","Order","Family","Genus","Species")
       temp$TAXONOMY <- apply(temp[,which(colnames(temp) %in% names)], 1, function(x) paste(x, collapse="; "))
-      temp <- merge(melt(rRNA_agg()$e_data), temp, by=attr(rRNA_agg(), "cnames")$edata_cname)
+      temp <- merge(reshape2::melt(rRNA_agg()$e_data), temp, by=attr(rRNA_agg(), "cnames")$edata_cname)
 
       vars <- c(attr(rRNA_agg(), "cnames")$edata_cname, attr(rRNA_agg(), "cnames")$taxa_cname, "TAXONOMY")
       vars <- lapply(vars, as.symbol)
@@ -311,12 +311,12 @@ shinyServer(function(input, output, session) {
     filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
                                    omicsData = filtered_rRNA_obj,
                                    num_samps = input$filter_kOverA_sample_threshold,
-                                   upper_lim = input$filter_count_threshold)
+                                   min_num = input$filter_count_threshold)
   })
   observeEvent(input$sample_filter_go, {
     filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$sample[[input$sample_filter_go]],
                                                omicsData = filtered_rRNA_obj,
-                                               upper_lim = input$n)
+                                               min_num = input$n)
   })
   observeEvent(input$taxa_filter_go, {
     filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$taxa[[input$taxa_filter_go]],
@@ -384,7 +384,7 @@ shinyServer(function(input, output, session) {
       isolate({
         filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$sample[[input$sample_filter_go]],
                                                    omicsData = filt1,
-                                                   upper_lim = input$n)
+                                                   min_num = input$n)
         #return(filtered_rRNA_obj)
       })
     }
@@ -413,7 +413,7 @@ shinyServer(function(input, output, session) {
         filt1 <<- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
                                       omicsData = groupDF(),
                                       num_samps = input$filter_kOverA_sample_threshold,
-                                      upper_lim = input$filter_count_threshold)
+                                      min_num = input$filter_count_threshold)
       })
     }
 
@@ -486,7 +486,7 @@ shinyServer(function(input, output, session) {
       isolate({
         filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$sample[[input$sample_filter_go]],
                                                    omicsData = filt1,
-                                                   upper_lim = input$n)
+                                                   min_num = input$n)
         #return(filtered_rRNA_obj)
       })
     }
@@ -501,7 +501,7 @@ shinyServer(function(input, output, session) {
         filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
                                       omicsData = filtered_rRNA_obj,
                                       num_samps = input$filter_kOverA_sample_threshold,
-                                      upper_lim = input$filter_count_threshold)
+                                      min_num = input$filter_count_threshold)
 
       })
     }
