@@ -5,7 +5,7 @@ source("./functions/helper_functions.R")
 #list of all packages
 packs <- installed.packages()[,"Package"]
 #list of required packages
-dependencies <- c("shiny", "shinyjs", "lazyeval", "V8", "dplyr", "DT", "ggplot2", "vegan", "goeveg", "plotly", "DESeq2", "edgeR", "indicspecies", "ALDEx2", "fdrtool")
+dependencies <- c("shiny", "shinyjs", "shinycssloaders", "lazyeval","lubridate", "V8", "dplyr", "DT", "ggplot2", "vegan", "goeveg", "plotly", "DESeq2", "edgeR", "indicspecies", "ALDEx2", "fdrtool")
 
 # add in custom packages and installs
 if (!("filterWidget" %in% packs)) devtools::install("filterWidget")
@@ -50,26 +50,25 @@ library(shinycssloaders)
 source("./functions/helper_functions.R")
 source("./functions/test_functions.R")
 # create a reset session button using a js method
-jsResetCode <- "shinyjs.reset = function() {history.go(0)}"
-shinyUI(navbarPage(title = (windowTitle = "mead"),
+#jsResetCode <- "shinyjs.reset = function() {history.go(0)}"
+tagList(
+  navbarPage(title = div(img(src = "Honey_Jar.png", height = 33, width = 22), "mead"),
+        windowTitle = "mead",
+        theme = "yeti.css",
 
-
-
-
-  
- # titlePanel(div(img(src = "Honey_Jar.png", height = 33, width = 22), "mead")),
+# titlePanel(div(img(src = "Honey_Jar.png", height = 33, width = 22), "mead")),
  
-
+#---------------- Load Data Page ----------------#
  tabPanel("Data", 
           tags$head(
           ),
-          fluidRow(column(width=12,
-                          useShinyjs(),                                           
-                          extendShinyjs(text = jsResetCode),                     
-                          actionButton("reset_button", "Reset All") 
-                          )
-            
-          ),
+          # fluidRow(column(width = 12,
+          #                 useShinyjs(),                                           
+          #                 extendShinyjs(text = jsResetCode),                     
+          #                 actionButton("reset_button", "Reset All") 
+          #                 )
+          #   
+          # ),
 
           fluidRow(
             column(width = 12,
@@ -155,8 +154,9 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
           p("The following table shows the number of samples in each group."),
           DT::dataTableOutput("group_tab"),
           br()
-  ),
+  ),#end data upload
 
+#---------------- All Filtering ----------------#
   tabPanel("Filtering",
            h3("Metadata View"),
            fluidRow(
@@ -235,14 +235,15 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
              actionButton("taxa_filter_go", label = "Apply Taxa Filter", icon = icon("bar-chart"))
            ),
            br()
-    ),
+    ),#end filtering
  
   # tabPanel("Group Designation",
   #          #verbatimTextOutput("summ_filt"),
   #          #verbatimTextOutput("nrow_edata"),
   #         
   #  ),
-   
+
+#---------------- Outliers ----------------#   
  tabPanel("Outliers",
           p("Use the Jaccard Index to look for other outliers in the dataset."),
           br(),
@@ -271,8 +272,9 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
             column(width = 6, tableOutput("audies")),
             column(width = 6, actionButton("remove_outliers", label = "Remove Outliers"))
           )
-   ),
- 
+   ),#end outliers
+
+#---------------- Normalization ----------------#
   tabPanel("Normalization",
            h2("Which normalization function to use?"),
            uiOutput("normFunc"),
@@ -290,8 +292,9 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
            ),
            uiOutput("norm_class"),
            plotlyOutput("norm_plot")
-  ),
-  
+  ),#end normalization
+
+#---------------- Community Metrics ----------------#  
   tabPanel("Community Metrics",
            h3("Plot Parameters"),
            uiOutput("xaxis"),
@@ -318,8 +321,9 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
            h3("Effective Species"),
            plotlyOutput("effsp_plot"),
            verbatimTextOutput("effsp_summary")
-  ),
- 
+  ),# end community metrics
+
+#---------------- Ordination ----------------# 
   tabPanel("Ordination",
            h3("Parameters"),
            uiOutput("beta_index"),
@@ -330,12 +334,12 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
            withSpinner(plotOutput("dimcheck")),
            #uiOutput("ord_method"),
            fluidRow(
-             column(width=3, uiOutput("k")),
-             column(width=3, uiOutput("ord_x"))
+             column(width = 3, uiOutput("k")),
+             column(width = 3, uiOutput("ord_x"))
            ),
            fluidRow(
-             column(width=3, uiOutput("ord_colors")),
-             column(width=3, uiOutput("ord_y"))
+             column(width = 3, uiOutput("ord_colors")),
+             column(width = 3, uiOutput("ord_y"))
            ),
            actionButton(
              inputId = "submit_ord",
@@ -345,8 +349,9 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
            #DT::dataTableOutput("beta"),
            #DT::dataTableOutput("mydist"),
            withSpinner(plotlyOutput("ord_plot"))
-  ),
+  ),# end ordination
 
+#---------------- Defferential Abundance ----------------#
  tabPanel("Differential Abundance",
           h3("Parameters"),
           uiOutput("da_index"),
@@ -363,8 +368,9 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
           plotOutput("flag_plot"),
           plotOutput("logfc_plot"),
           plotOutput("plot_all_da")
-  ),
- 
+  ),#end differential abundance
+
+#---------------- Indicator Species ----------------#
  tabPanel("Indicator Species",
           h3("Parameters"),
           uiOutput("within"),
@@ -377,7 +383,7 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
           verbatimTextOutput("indsp_summary"),
           uiOutput("indsp_xaxis"),
           uiOutput("indsp_group"),
-          plotlyOutput("indsp_plot")
+          plotlyOutput("indsp_plot", width = "100%")
   ),
  
  tabPanel("Statistics Results",
@@ -392,7 +398,8 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
           #   p("This page is for combining the results of differential abundance analysis and indicator species analysis.")
           # }
   ),
- 
+
+#---------------- ALDEx2 Differential Abundance ----------------#
  tabPanel("Differential Abundance - ALDEx2",
           h3("Parameters"),
           uiOutput("pa_mainEffects"),
@@ -407,22 +414,23 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
           verbatimTextOutput("pa_summary"),
           plotOutput("pa_pval_plot"),
           plotOutput("pa_flag_plot")
- ),
- 
+ ), #end ALDEx2 diff abundance
+
+#---------------- Network Analysis -------------# 
  tabPanel("Network Analysis",
           h3("Parameters"),
           fluidRow(
-            column(width=4, uiOutput("na_group")),
-            column(width=4, uiOutput("na_size")),
-            column(width=4, uiOutput("na_colour"))
+            column(width = 4, uiOutput("na_group")),
+            column(width = 4, uiOutput("na_size")),
+            column(width = 4, uiOutput("na_colour"))
           ),
           fluidRow(
-            column(width=4, uiOutput("na_group_var")),
-            column(width=4, uiOutput("na_coeff"))
+            column(width = 4, uiOutput("na_group_var")),
+            column(width = 4, uiOutput("na_coeff"))
           ),
           fluidRow(
-            column(width=4, uiOutput("na_missingval")),
-            column(width=4, uiOutput("na_qval"))
+            column(width = 4, uiOutput("na_missingval")),
+            column(width = 4, uiOutput("na_qval"))
           ),
           # uiOutput("na_group"),
           # uiOutput("na_group_var"),
@@ -461,10 +469,12 @@ shinyUI(navbarPage(title = (windowTitle = "mead"),
  tabPanel("Download",
           uiOutput("files_to_download"),
           downloadButton("downloadData","Download")
-  ),
-  
- tabPanel("Meg's Tab",
-          uiOutput("megs_output")
-  )
-  
-)) #end page
+  )#,
+#---------- Placeholder for Meg's Awesome Viz----------#
+ #  
+ # tabPanel("Meg's Tab",
+ #          uiOutput("megs_output")
+ #  )
+ #  
+) #end page
+)

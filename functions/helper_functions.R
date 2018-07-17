@@ -1,16 +1,8 @@
 require(shiny)
 get_plot_output_list <- function(meta_data) {
-  # try to coerce columns to Date
-  date_formats <- c("%d/%m/%Y","%m/%d/%y")
-  date_column <- which(sapply(meta_data, function(x) !all(is.na(as.Date(as.character(x),format = date_formats)))))
-  if (length(date_column == 1)) {
-    #date_obj <- meta_data[,date_column]
-    meta_data <- meta_data[,-date_column] 
-    # TODO: Render Date as a bar chart
-  }
   # get the class of each remaining column in the data frame
   column_class <- sapply(meta_data, class)
-  numerical <- meta_data[, which(column_class %in% c("numeric", "integer"))]
+  numerical <- meta_data[, which(column_class %in% c("numeric"))]
   input_n_numeric <- ncol(numerical)
   
   # numerical plots
@@ -28,11 +20,41 @@ get_plot_output_list <- function(meta_data) {
   return(plot_output_list)
 }
 
+# thank you stack overflow! http://grokbase.com/t/r/r-help/127vrkcj7e/r-add-leading-zeros
+add.dt0 <- function(x, width=8 ){
+  sprintf(paste('%0', width, switch(is.numeric(x)+1, 's', 'i'),
+                sep=''), x)
+}
+
 get_checkbox_output_list <- function(meta_data) {
+  # check to see if any dates parse
+  #browser()
+  date.formats = c("%m/%d/%Y", "%Y/%m/%d")
+  for (col.idx in seq_len(ncol(meta_data))) {
+    x <- meta_data[, col.idx]
+    if (!(is.character(x) | is.integer(x)) | is.factor(x)) next #epoch time could be numeric
+    if (all(is.na(x))) next
+    for (format in date.formats) {
+      complete.x <- !(is.na(x))
+      if (is.integer(x)) {
+        if (nchar(x[1]) < 8) {
+          d <- as.Date(lubridate::parse_date_time(add.dt0(as.character(x)), format, quiet = TRUE))
+        }else{
+          d <- as.Date(lubridate::as_datetime(x))
+        }
+      } else{
+        d <- as.Date(lubridate::parse_date_time(as.character(x), format, quiet = TRUE))
+      }
+      d.na <- d[complete.x]
+      if (any(is.na(d.na))) next
+      meta_data[, col.idx] <- d 
+    }
+  }
+  # find factor columns
   column_class <- sapply(meta_data, class)
-  categorical <- meta_data[, which(column_class %in% c("character", "factor", "logical"))]
+  categorical <- meta_data[, which(column_class %in% c("character", "factor", "logical", "Date", "integer"))]
   # If categorical check for non-uniqueness
-  non_unique_columns <- which(unlist(lapply(categorical, function(x) length(unique(x)) != nrow(categorical) & length(unique(x)) != 1)))
+  non_unique_columns <- which(unlist(lapply(categorical, function(x) length(unique(x)) != nrow(categorical) & !all(is.na(x)))))
   categorical <- categorical[, non_unique_columns]
   input_n_categorical <- ncol(categorical)
   # categorical boxes
@@ -49,16 +71,6 @@ get_checkbox_output_list <- function(meta_data) {
   return(categorical_list)
 }
 
-output_phyloseq_print_html = function(physeq){
-  HTML(
-    paste(
-      '<p class="phyloseq-print">',
-      paste0(capture.output(print(physeq)), collapse=" <br/> "),
-      "</p>"
-    )
-  )
-}
-
 numericInputRow <- function(inputId, label, value, min = NA, max = NA, step = NA, class="form-control", ...){
   inputTag <- tags$input(id = inputId, type = "number", value = value, class=class, ...)
   if (!is.na(min)) 
@@ -70,22 +82,4 @@ numericInputRow <- function(inputId, label, value, min = NA, max = NA, step = NA
   div(style="display:inline-block",
       tags$label(label, `for` = inputId), 
       inputTag)
-}
-
-parse_date_columns <- function(..., date.formats = c("%m/%d/%Y", "%Y/%m/%d")) {
-  dat <- read.table(...)
-  for (col.idx in seq_len(ncol(dat))) {
-    x <- dat[, col.idx]
-    if (!is.character(x) | is.factor(x)) next
-    if (all(is.na(x))) next
-    for (format in date.formats) {
-      complete.x <- !(is.na(x))
-      d <- as.Date(parse_date_time(as.character(x), format, quiet = TRUE))
-      d.na <- d[complete.x]
-      if (any(is.na(d.na))) next
-      dat[, col.idx] <- d         
-    }
-  }
-  dat
-  
 }

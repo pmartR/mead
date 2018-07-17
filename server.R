@@ -17,35 +17,25 @@ filtered_rRNA_obj <- list()
 shinyServer(function(input, output, session) {
   #---------- listen for session reset -------#
   observeEvent(input$reset_button, {js$reset()}) 
+  
+  ################# Data Upload Tab ###################
+  
   #---------- rRNA object import -------------#
   importObj <- reactive({
-    # validate(
-    #   need(input$biom != "", "Please select a biom file")
-    # )
     validate(
-      need(grepl(".biom", as.character(input$e_data$name)) | grepl(".csv", as.character(input$e_data$name)), "Data file must be in .biom or .csv format")
-    )
-    
-    # validate(
-    #   need(input$qiime != "", "Please select a qiime file")
-    # )
-    
-    validate(
-      need(input$e_data != "", "Please select a data file")
-    )
-    
-    validate(
+      need(grepl(".biom", as.character(input$e_data$name)) | grepl(".csv", as.character(input$e_data$name)), "Data file must be in .biom or .csv format"),
+      need(input$e_data != "", "Please select a data file"),
       need(input$f_data != "", "Please select a sample metadata file")
     )
+    
     if (!grepl(pattern = "\\.biom$", x = input$e_data$datapath)) {
       validate(need(input$e_meta != "", message = "Please upload feature metadata file"))
     }
-    
     # check for e_meta file
     if (is.null(input$e_meta$name) & grepl(".biom", as.character(input$e_data$name))) {
       return(pmartRseq::import_seqData(e_data_filepath = as.character(input$e_data$datapath),
                                        f_data_filepath = as.character(input$f_data$datapath),
-             e_meta_filepath = NULL))
+                                       e_meta_filepath = NULL))
     }
     # import e_meta if there is one
     if (!is.null(input$e_meta$name) & !grepl(".biom", as.character(input$e_data$name))) {
@@ -53,9 +43,9 @@ shinyServer(function(input, output, session) {
                                        f_data_filepath = as.character(input$f_data$datapath),
                                        e_meta_filepath = as.character(input$e_meta$datapath)))
     }
-  }) #end rRNAobj import
+  }) #end importObj
   
-  # Guess at column identifiers
+  #--------Guess at column identifiers----------#
   output$e_data_cname <- reactive(importObj()$guessed_edata_cname)
   output$f_data_cname <- reactive(importObj()$guessed_fdata_cname)
   
@@ -63,7 +53,7 @@ shinyServer(function(input, output, session) {
     selectInput(inputId = "new_e_data_cname", label = "New expression data identifier is:", 
                 choices = colnames(importObj()$e_data),
                 selected = importObj()$guessed_edata_cname,
-                               multiple = FALSE)
+                multiple = FALSE)
   })
   
   output$new_fdata_cname <- renderUI({
@@ -72,163 +62,111 @@ shinyServer(function(input, output, session) {
                 selected = importObj()$guessed_fdata_cname,
                 multiple = FALSE)
   })
-  # output$edata_cname <- renderUI({
-  #   selectInput("edata_cname",
-  #               label = "Identifier column name in data",
-  #               choices = colnames(importObj()$e_data),
-  #               selected = importObj()$guessed_edata_cname,
-  #               multiple = FALSE)
-  # })
-  # 
-  # output$fdata_cname <- renderUI({
-  #   selectInput("fdata_cname",
-  #               label = "Sample column name in sample metadata",
-  #               choices = colnames(importObj()$f_data),
-  #               selected = importObj()$guessed_fdata_cname,
-  #               multiple = FALSE)
-  # })
-  # 
-  # output$taxa_cname <- renderUI({
-  #   selectInput("taxa_cname",
-  #               label = "Taxonomic column of interest in feature metadata",
-  #               choices = colnames(importObj()$e_meta),
-  #               selected = importObj()$guessed_taxa_cname,
-  #               multiple = FALSE)
-  # })
   
-  #rRNAobj <- reactive({ return(importObj()) })
+  #---------- take the importObj and convert it to rRNAobj ------------#
+  #' this allows for a change in guessed column names
+  #' and parsing of emeta column into KPCOFGS if needed
+  rRNAobj <- reactive({
+    validate(
+      need(importObj, message = "Please upload data files to begin analysis"),
+      need(!is.null(importObj()$guessed_fdata_cname), message = "Please upload data files to begin analysis"),
+      need(!is.null(importObj()$guessed_edata_cname), message = "Please upload data files to begin analysis"),
+      need(!is.null(importObj()$guessed_taxa_cname), message = "Please upload data files to begin analysis"),
+      need(!is.null(input$new_f_data_cname), message = "Please upload data files to begin analysis")
+    )
+    tmp <- pmartRseq::as.seqData(e_data = importObj()$e_data,
+                                 f_data = importObj()$f_data,
+                                 e_meta = importObj()$e_meta,
+                                 fdata_cname = input$new_f_data_cname,
+                                 edata_cname = input$new_e_data_cname,
+                                 taxa_cname = importObj()$guessed_taxa_cname,
+                                 data_type = "rRNA")
+    # Parsing KPCOFGS columns
+    if (ncol(tmp$e_meta) <= 2){
+      tmp <- pmartRseq::split_emeta(tmp, cname=attr(tmp,"cnames")$taxa_cname, split1=",", numcol=7, split2="__", num=2, newnames=NULL)
+    }else{
+      tmp <- pmartRseq::split_emeta(tmp, cname=attr(tmp,"cnames")$edata_cname, split1=NULL, numcol=7, split2="__", num=2, newnames=NULL)
+    }
+    
+    return(tmp)
+    
+  })
+  # end rRNAobj
   
-  #observeEvent(input$Upload,{
+  #------ Allow taxonomic rollup ---------#
+  output$rollup <- renderUI({
+    selectInput("rollup",
+                label = "Which taxonomic level should analysis be performed at?",
+                choices = c("Kingdom","Phylum","Class","Order","Family","Genus","Species",attr(rRNAobj(), "cnames")$edata_cname),
+                selected = attr(rRNAobj(), "cnames")$edata_cname,
+                multiple = FALSE)
+  })
   
-    rRNAobj <- reactive({
-      validate(
-        need(importObj, message = "Please upload data files to begin analysis"),
-        need(!is.null(importObj()$guessed_fdata_cname), message = "Please upload data files to begin analysis"),
-        need(!is.null(importObj()$guessed_edata_cname), message = "Please upload data files to begin analysis"),
-        need(!is.null(importObj()$guessed_taxa_cname), message = "Please upload data files to begin analysis"),
-        need(!is.null(input$new_f_data_cname), message = "Please upload data files to begin analysis")
-      )
-      tmp <- pmartRseq::as.seqData(e_data = importObj()$e_data,
-                                   f_data = importObj()$f_data,
-                                   e_meta = importObj()$e_meta,
-                                   fdata_cname = input$new_f_data_cname,
-                                   edata_cname = input$new_e_data_cname,
-                                   taxa_cname = importObj()$guessed_taxa_cname,
-                                   data_type = "rRNA")
-      
-      if(ncol(tmp$e_meta) <= 2){
-        tmp <- pmartRseq::split_emeta(tmp, cname=attr(tmp,"cnames")$taxa_cname, split1=",", numcol=7, split2="__", num=2, newnames=NULL)
-      }else{
-        tmp <- pmartRseq::split_emeta(tmp, cname=attr(tmp,"cnames")$edata_cname, split1=NULL, numcol=7, split2="__", num=2, newnames=NULL)
-      }
-      
-      return(tmp)
-      
-    })
+  rRNA_agg <- reactive({
+    validate(
+      need(length(input$rollup) == 1, "Need to specify a taxonomic level")
+    )
+    return(pmartRseq::taxa_rollup(omicsData = rRNAobj(), level = input$rollup, taxa_levels = NULL))
+  })
+  # end rollup obj rRNA_agg
+  output$sample_data <- DT::renderDataTable(expr = 
+                                              data.frame(rRNA_agg()$e_data), rownames = FALSE, class = 'cell-border stripe compact hover',
+                                            options = list(columnDefs = list(list(
+                                              targets = c(1:(ncol((rRNA_agg()$e_data)) - 1)),
+                                              render = JS(
+                                                "function(data, type, row, meta) {",
+                                                "return type === 'display' && data.length > 10 ?",
+                                                "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
+                                                "}")
+                                            ))), callback = JS('table.page(3).draw(false);'))
+  
+  #---- The pipeline requires a grouping. Set these here -------#
+  group_vars <- reactive({
+    intersect(which(lapply(apply(rRNA_agg()$f_data,
+                                 2,
+                                 function(z) table(z))[unlist(lapply(apply(rRNA_agg()$f_data, 2, function(x) table(x)),
+                                                                     function(y) any(is.finite(y))))], function(w) max(w)) > 2),
+              which(apply(rRNA_agg()$f_data,
+                          2,
+                          function(v) length(unique(v))) >= 2))
+  })
+  
+  output$gdfMainEffect <- renderUI({
+    selectInput("gdfMainEffect",
+                label = "Main Effect(s) to use for Groupings",
+                choices = colnames(rRNA_agg()$f_data)[group_vars()],
+                multiple = TRUE)
+  })
+  
+  # Create groups with main effects
+  groupDF <- reactive({
+    # depends on a grouping var gdfMainEffect
+    # uses the current data object, rRNA_agg()
+    mainEffects <- input$gdfMainEffect
+    validate(
+      need(length(mainEffects) > 0, "There needs to be at least one grouping variable")
+    )
+    filtered_rRNA_obj <<- pmartRseq::group_designation(rRNA_agg(), main_effects = mainEffects)
+    return(pmartRseq::group_designation(rRNA_agg(), main_effects = mainEffects))
+  })
 
-
-    output$rollup <- renderUI({
-      selectInput("rollup",
-                  label = "Which taxonomic level should analysis be performed at?",
-                  choices = c("Kingdom","Phylum","Class","Order","Family","Genus","Species",attr(rRNAobj(), "cnames")$edata_cname),
-                  selected = attr(rRNAobj(), "cnames")$edata_cname,
-                  multiple = FALSE)
-    })
-    
-    rRNA_agg <- reactive({
-      validate(
-        need(length(input$rollup) == 1, "Need to specify a taxonomic level")
-      )
-      
-      return(pmartRseq::taxa_rollup(omicsData = rRNAobj(), level = input$rollup, taxa_levels = NULL))
-    })
-    
-    output$sample_data <- DT::renderDataTable(expr = 
-                                                data.frame(rRNA_agg()$e_data), rownames = FALSE, class = 'cell-border stripe compact hover',
-                                              options = list(columnDefs = list(list(
-                                                targets = c(1:(ncol((rRNA_agg()$e_data)) - 1)),
-                                                render = JS(
-                                                  "function(data, type, row, meta) {",
-                                                  "return type === 'display' && data.length > 10 ?",
-                                                  "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
-                                                  "}")
-                                              ))), callback = JS('table.page(3).draw(false);'))
-    
-    
-    # ################ Group Designation Tab #################
-    
-    group_vars <- reactive({
-      intersect(which(lapply(apply(rRNA_agg()$f_data, 2, function(z) table(z))[unlist(lapply(apply(rRNA_agg()$f_data, 2, function(x) table(x)), function(y) any(is.finite(y))))], function(w) max(w)) > 2), which(apply(rRNA_agg()$f_data, 2, function(v) length(unique(v))) >= 2))
-      
-    })
-    
-    output$gdfMainEffect <- renderUI({
-      selectInput("gdfMainEffect",
-                  label = "Main Effect(s) to use for Groupings",
-                  choices = colnames(rRNA_agg()$f_data)[group_vars()],
-                  multiple = TRUE)
-    })
-    
-    # output$covs <- renderUI({
-    #   checkboxInput("covs",
-    #                 label = "Any covariates?")
-    # })
-    # input$cov1 <- NA
-    # input$cov2 <- NA
-    #observeEvent(input$covs, {
-    #   output$cov1 <- renderUI({
-    #     selectInput("cov1",
-    #                 label = "Covariate 1",
-    #                 choices = c("NA",colnames(rRNA_agg()$f_data)),
-    #                 selected = NULL)
-    #   })
-    #   
-    #   output$cov2 <- renderUI({
-    #     selectInput("cov2",
-    #                 label = "Covariate 2",
-    #                 choices = c("NA",colnames(rRNA_agg()$f_data)),
-    #                 selected = NULL)
-    #     #groupDesignation
-    #   })
-    # #})
-    
-    
-    # Create groups with main effects
-    groupDF <<- reactive({
-      mainEffects <- input$gdfMainEffect
-      # if(!is.na(input$cov1) | !is.na(input$cov2)){
-      #   covariates <- c(input$cov1, input$cov2)
-      #   if(any(is.na(covariates))){
-      #     covariates <- covariates[!is.na(covariates)]
-      #   }
-      # }
-      validate(
-        need(length(mainEffects) > 0, "There needs to be at least one grouping variable")
-      )
-      
-      return(pmartRseq::group_designation(rRNA_agg(), main_effects = mainEffects))
-      
-    })
-    
-    # Show the groupings data frame
-    #observeEvent(input$groupDF_go,
-    group_df_tab <- reactive({
-      attr(groupDF(), "group_DF")
-    })
-    output$group_DF <- DT::renderDataTable(group_df_tab())
-    #)
-    
-    # Also output a table showing the number of reps in each group
-    group_freq_tab <- reactive({
-      as.data.frame(table(attr(groupDF(),"group_DF")$Group))
-    })
-    output$group_tab <- DT::renderDataTable(group_freq_tab())
-    
-  #})
+  # output$placeholder <- renderText({
+  #   filtered_rRNA_obj <<- groupDF()
+  # })
+  # Show the groupings data frame
+  output$group_DF <- DT::renderDataTable(attr(groupDF(), "group_DF"))
   
-  # ################ Filtering Tab #################
+  # Also output a table showing the number of reps in each group
+  output$group_tab <- DT::renderDataTable(as.data.frame(table(attr(groupDF(),"group_DF")$Group)))
+  
+  #' End data upload. Working copy of the data is groupDF() which is a grouped
+  #' version of the data that may or may not be rolled up to a specified
+  #' taxonomic level
+  
+  ################# Filtering Tab #################
   
   #-------- filter history support -----------#
+  # use a list to keep track of the applied filters
   filters <- reactiveValues(otu = list(), sample = list(), taxa = list(), metadata = list(), outlier = list())
   
   #--------- kovera observer ---------#
@@ -252,46 +190,53 @@ shinyServer(function(input, output, session) {
   })
   
   #--------- filter application observer ---------#
-  filtered_rRNA_obj <- NULL
-  #filt1 <- NULL
-  observeEvent(groupDF(), {
-      filtered_rRNA_obj <<- groupDF()
-  }, priority = 10)
-  
+  # observeEvent(input$gdfMainEffect, {
+  #   filtered_rRNA_obj <<- groupDF()
+  # })
+  # 
   #--------- apply filter applications on click ---------#
+  # otu filtering (kovera, mean, etc)
   observeEvent(input$otu_filter_go, {
     filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
-                                   omicsData = filtered_rRNA_obj,
-                                   num_samps = input$filter_kOverA_sample_threshold,
-                                   upper_lim = input$filter_count_threshold)  
+                                               omicsData = filtered_rRNA_obj,
+                                               num_samps = input$filter_kOverA_sample_threshold,
+                                               upper_lim = input$filter_count_threshold)  
   })
+  # sample filtering
   observeEvent(input$sample_filter_go, {
     filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$sample[[input$sample_filter_go]],
                                                omicsData = filtered_rRNA_obj,
                                                upper_lim = input$n)
   })
+  # taxa filtering
   observeEvent(input$taxa_filter_go, {
     filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$taxa[[input$taxa_filter_go]],
                                                omicsData = filtered_rRNA_obj,
                                                keep_taxa = input$keep_taxa)
   })
+  # metadata filtering (check boxes and brushable bar charts)
   observeEvent(input$metadata_filter_go, {
-    # get the intersection of the samples left after checkbox groups are removed
+    #' get the intersection of the samples left after checkbox groups are removed
+    # first find the column classes of f_data
     temp <- filtered_rRNA_obj$f_data
     column_class <- sapply(temp, class)
+    # check box classes(categorical) can belong to character, factor, or logical classes
     categorical <- temp[, which(column_class %in% c("character", "factor", "logical"))]
     # If categorical check for non-uniqueness
     non_unique_columns <- which(unlist(lapply(categorical, function(x) length(unique(x)) != nrow(categorical) & length(unique(x)) != 1)))
+    # keep categorical columns that have nonunique entries
     if(length(non_unique_columns > 0)){
       check_boxes <- names(categorical)[non_unique_columns]
     } else {
       check_boxes <- names(categorical)
     }
+    # create labels for each set of check boxes with column names
     sample_names <- list()
     for (i in 1:length(check_boxes)) {
       sample_names[[i]] <- dplyr::filter_(temp, interp(~v%in%input[[check_boxes[i]]], v=as.name(check_boxes[i]))) %>%
         dplyr::select(eval(quote(attr(filtered_rRNA_obj, "cnames")$fdata_cname)))#find the column name and associated check box
     }
+    # start listening for boxes that are checked 
     sample_names <- Reduce(dplyr::intersect, sample_names)
     #check if there are no samples to remove 
     if (nrow(sample_names) == length(temp[, attr(filtered_rRNA_obj, "cnames")$fdata_cname])) {
@@ -322,39 +267,39 @@ shinyServer(function(input, output, session) {
       }
       
     })
+    
     output$filter_ui_kOverA_k <- renderUI({
       numericInputRow("filter_kOverA_sample_threshold", "",
                       min = 1, max = maxSamples(), value = kovera_k, step = 1)
     })
+    # create a copy of the old data for filtering
     filt1 <- groupDF()
     # no sample filter yet
     if (input$sample_filter_go == 0) {
       filtered_rRNA_obj <<- filt1
-      #return(filtered_rRNA_obj)
     }else{
       # apply sample filter
       isolate({
         filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$sample[[input$sample_filter_go]],
                                                    omicsData = filt1,
                                                    upper_lim = input$n)
-        #return(filtered_rRNA_obj)
       })
     }
-    
-    if(input$taxa_filter_go == 0){
+    # no taxa filter yet
+    if (input$taxa_filter_go == 0){
       filtered_rRNA_obj <<- filtered_rRNA_obj
     }else{
       isolate({
         filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filter$taxa[[input$taxa_filter_go]],
-                                      omicsData = filtered_rRNA_obj,
-                                      keep_taxa = input$keep_taxa)
+                                                   omicsData = filtered_rRNA_obj,
+                                                   keep_taxa = input$keep_taxa)
       })
     }
     return(filtered_rRNA_obj)
   })
   
   observeEvent(input$sample_reset_button, {
-
+    
     updateNumericInput(session, "n",
                        value = 0)
     if (input$otu_filter_go == 0) {
@@ -363,19 +308,19 @@ shinyServer(function(input, output, session) {
       # apply k over a filter
       isolate({
         filt1 <<- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
-                                      omicsData = groupDF(),
-                                      num_samps = input$filter_kOverA_sample_threshold,
-                                      upper_lim = input$filter_count_threshold)  
+                                       omicsData = groupDF(),
+                                       num_samps = input$filter_kOverA_sample_threshold,
+                                       upper_lim = input$filter_count_threshold)  
       })
     }
     
-    if(input$taxa_filter_go == 0){
+    if (input$taxa_filter_go == 0){
       filt1 <<- filt1
     }else{
       isolate({
         filt1 <<- pmartRseq::applyFilt(filter_object = filter$taxa[[input$taxa_filter_go]],
-                                      omicsData = filt1,
-                                      keep_taxa = input$keep_taxa)
+                                       omicsData = filt1,
+                                       keep_taxa = input$keep_taxa)
       })
     }
     
@@ -385,34 +330,6 @@ shinyServer(function(input, output, session) {
   })
   
   observeEvent(input$taxa_reset_button, {
-    
-    # output$criteria <- renderUI({
-    #   selectInput("criteria",
-    #               label = "Which taxonomic level to use for filtering",
-    #               choices = colnames(groupDF()$e_meta),
-    #               multiple = FALSE)
-    # })
-    # 
-    # keep_taxa = reactive({
-    #   # Create logical indicating the samples to keep, or dummy logical if nonsense input
-    #   validate(
-    #     need(!(is.null(groupDF()$e_meta)), message = "please import feature metadata")
-    #   )
-    #   if (!is.null(groupDF()$e_meta)) {
-    #     return(unique(groupDF()$e_meta[,input$criteria]))
-    #   } else {
-    #     return(NULL)
-    #   }
-    #   
-    # })
-    # 
-    # output$keep_taxa <- renderUI({
-    #     selectInput("keep_taxa",
-    #                 label = "Which taxa to keep in the analysis",
-    #                 choices = c(keep_taxa),
-    #                 multiple = TRUE)
-    #   })
-    
     output$criteria <- renderUI({
       selectInput("criteria",
                   label = "Which taxonomic level to use for filtering",
@@ -442,7 +359,7 @@ shinyServer(function(input, output, session) {
         #return(filtered_rRNA_obj)
       })
     }
-
+    
     # no otu filter yet
     if (input$otu_filter_go == 0) {
       filtered_rRNA_obj <<- filtered_rRNA_obj
@@ -451,56 +368,55 @@ shinyServer(function(input, output, session) {
       # apply sample filter
       isolate({
         filtered_rRNA_obj <<- pmartRseq::applyFilt(filter_object = filters$otu[[input$otu_filter_go]],
-                                      omicsData = filtered_rRNA_obj,
-                                      num_samps = input$filter_kOverA_sample_threshold,
-                                      upper_lim = input$filter_count_threshold)  
+                                                   omicsData = filtered_rRNA_obj,
+                                                   num_samps = input$filter_kOverA_sample_threshold,
+                                                   upper_lim = input$filter_count_threshold)  
         
       })
     }
     return(filtered_rRNA_obj)
-    })
-  
-  #})
-  
+  })
+
   #--------- Metadata Object for filtering -----------#
   metadata_obj <- reactive({
-    #------- TODO: need to display an error if the rRNA object isn't created! ---------#
-    validate(
-      need(!(is.null(groupDF()$f_data)), message = "rRNA object fail. Check to make sure file paths are correct")
-    )
     input$metadata_filter_go
     input$metadata_reset_button
     input$sample_filter_go
     input$sample_reset_button
     input$otu_filter_go
     input$otu_reset_button
+    input$gdfMainEffect
+    #------- TODO: need to display an error if the rRNA object isn't created! ---------#
+    validate(
+      need(!(is.null(filtered_rRNA_obj$f_data)), message = "rRNA object fail. Check to make sure file paths are correct")
+    )
     if (is.null(input$f_data)) {
       return(NULL)
     }else{
-      temp <- filtered_rRNA_obj$f_data
-      inds <- lapply(temp, function(x) sum(is.na(x)) == length(x) )
-      results <- temp[,!(unlist(inds))]
+      #temp <- filtered_rRNA_obj$f_data
+      inds <- lapply(filtered_rRNA_obj$f_data, function(x) sum(is.na(x)) == length(x) )
+      results <- filtered_rRNA_obj$f_data[,!(unlist(inds))]
       return(results)
     }
   })
   
   
   output$sample_metadata <- DT::renderDataTable(expr = 
-    data.frame(metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
-    options = list(columnDefs = list(list(
-      targets = c(1:(ncol((metadata_obj())) - 1)),
-      render = JS(
-        "function(data, type, row, meta) {",
-        "return type === 'display' && data.length > 10 ?",
-        "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
-        "}")
-    ))), callback = JS('table.page(3).draw(false);'))
+                                                  data.frame(metadata_obj()), rownames = FALSE, class = 'cell-border stripe compact hover',
+                                                options = list(columnDefs = list(list(
+                                                  targets = c(1:(ncol((metadata_obj())) - 1)),
+                                                  render = JS(
+                                                    "function(data, type, row, meta) {",
+                                                    "return type === 'display' && data.length > 10 ?",
+                                                    "'<span title=\"' + data + '\">' + data.substr(0, 10) + '...</span>' : data;",
+                                                    "}")
+                                                ))), callback = JS('table.page(3).draw(false);'))
   
   
   #---- Charts for f_meta filtering -------#
   # 
   sample_metadata_filter_obj <- reactive({
-    return(pmartRseq::sample_based_filter(omicsData = groupDF(), fn = "criteria"))
+    return(pmartRseq::sample_based_filter(omicsData = filtered_rRNA_obj, fn = "criteria"))
   })
   observeEvent(input$metadata_reset_button, {
     output$sample_metadata <- DT::renderDataTable(
@@ -514,10 +430,16 @@ shinyServer(function(input, output, session) {
           "}")
       ))), callback = JS('table.page(3).draw(false);'))  })
   
-  observeEvent(groupDF(), {
+  # observeEvent(groupDF(), {
     # If the metadata has been loaded, create the charts
-    output$plots <- renderUI({get_plot_output_list(metadata_obj())})
-    output$boxes <- renderUI({get_checkbox_output_list(groupDF()$f_data)})
+    output$plots <- renderUI({
+      input$gdfMainEffect
+      get_plot_output_list(metadata_obj())
+      })
+    output$boxes <- renderUI({
+      input$gdfMainEffect
+      get_checkbox_output_list(groupDF()$f_data)
+      })
     # Initialize new_metadata_obj object. If no metadata filtering then it's a copy of metadata_obj.
     # If metadata filtering, will be overwritten with filters 
     
@@ -546,7 +468,7 @@ shinyServer(function(input, output, session) {
     outputOptions(output, "plots", suspendWhenHidden = FALSE)
     #outputOptions(output, "library_sizes", suspendWhenHidden = FALSE)
     #outputOptions(output, "sample_metadata", suspendWhenHidden = FALSE)
-  })
+  # })
   #------- Reset everything or keep the filtered subset -------#
   observeEvent(input$metadata_reset_button,{
     output$plots <- renderUI({get_plot_output_list(metadata_obj())})
@@ -564,9 +486,8 @@ shinyServer(function(input, output, session) {
   observeEvent(input$metadata_reset_button, {
     output$boxes <- renderUI({get_checkbox_output_list(rRNA_agg()$f_data)})
   })
-  
   # end sample metadata filtering
-  # end sample metadata filtering
+
   #--------------- k over a filtering  -----------------#
   kovera_k <- 1
   observeEvent(groupDF(), {
@@ -586,19 +507,19 @@ shinyServer(function(input, output, session) {
     output$filter_ui_kOverA_k <- renderUI({
       if (input$count_filter_fun == "ka") {
         return(numericInputRow("filter_kOverA_sample_threshold", "in",
-                        min = 1, max = maxSamples(), value = kovera_k, step = 1))
+                               min = 1, max = maxSamples(), value = kovera_k, step = 1))
       } else {
         return(NULL)
       }
       
     })
   })
-  
+  # create otu filter object to apply to data
   otu_filter_obj <- reactive({
     validate(
       need(length(filtered_rRNA_obj) > 0 , message = "Upload data first")
     )
-    return(pmartRseq::count_based_filter(groupDF(), fn = input$count_filter_fun))
+    return(pmartRseq::count_based_filter(filtered_rRNA_obj, fn = input$count_filter_fun))
   })
   
   
@@ -645,18 +566,18 @@ shinyServer(function(input, output, session) {
   #-------------- taxa filtering -----------#
   
   output$criteria <- renderUI({
-      selectInput("criteria",
-                  label = "Which taxonomic level to use for filtering",
-                  choices = colnames(groupDF()$e_meta),
-                  selected = colnames(groupDF()$e_meta)[2],
-                  multiple = FALSE)
+    selectInput("criteria",
+                label = "Which taxonomic level to use for filtering",
+                choices = colnames(groupDF()$e_meta),
+                selected = colnames(groupDF()$e_meta)[2],
+                multiple = FALSE)
   })
   
   output$keep_taxa <- renderUI({
-      selectInput("keep_taxa",
-                  label = "Which taxonomies to keep",
-                  choices = unique(groupDF()$e_meta[,input$criteria]),
-                  multiple = TRUE)
+    selectInput("keep_taxa",
+                label = "Which taxonomies to keep",
+                choices = unique(groupDF()$e_meta[,input$criteria]),
+                multiple = TRUE)
   })
   
   taxa_filter_obj <- reactive({
@@ -681,7 +602,7 @@ shinyServer(function(input, output, session) {
       cat("This keeps ",length(which(taxa_filter_obj[,input$criteria] %in% input$keep_taxa))," out of a possible ",nrow(taxa_filter_obj), " features (roughly ", length(which(taxa_filter_obj[,input$criteria] %in% input$keep_taxa))/nrow(taxa_filter_obj)*100,"%). This correlates to a total number of ",sum(taxa_filter_obj$Sum[which(taxa_filter_obj[,input$criteria] %in% input$keep_taxa)], na.rm=TRUE)," sequences kept out of a possible ",sum(taxa_filter_obj$Sum, na.rm=TRUE)," sequences (roughly ",sum(taxa_filter_obj$Sum[which(taxa_filter_obj[,input$criteria] %in% input$keep_taxa)], na.rm=TRUE)/sum(taxa_filter_obj$Sum, na.rm=TRUE)*100,"%).")
     }
   })
-
+  
   #------------ reactive filtered data for downstream processing --------------#
   #--------- outlier observer ---------#
   outlier_filter_obj <- reactive({
@@ -692,14 +613,13 @@ shinyServer(function(input, output, session) {
     return(pmartRseq::sample_based_filter(omicsData = filtered_rRNA_obj, fn = "criteria"))
   })
   
-  observeEvent(input$remove_outliers, priority = 2, {
+  observeEvent(input$remove_outliers,{
     filters$outliers[[input$remove_outliers]] <- outlier_filter_obj()
     filtO <- pmartRseq::applyFilt(omicsData = filtered_rRNA_obj, outlier_filter_obj(), samps_to_remove =  outlier_jaccard()[outlier_jaccard()$jaqsID %in% selected_outliers()[["key"]], "jaqsID"])
     filtered_rRNA_obj <<- filtO
   })
   
   filtered_data <- reactive({
-    event_data("plotly_selected")
     input$gdfMainEffect
     input$metadata_filter_go
     input$metadata_reset_button
@@ -716,27 +636,29 @@ shinyServer(function(input, output, session) {
   
   
   output$summ_filt <- renderPrint({
+    input$gdfMainEffect
+    filtered_rRNA_obj
     validate(
       need(!(is.null(metadata_obj())), message = "please import sample metadata")
     )
     validate(
       need(!(is.null(filtered_data())) , message = "Upload data first")
     )
-    summary(filtered_data())
+    summary(filtered_rRNA_obj)
   })
   
   output$nrow_edata <- renderPrint({
     nrow(filtered_data()$e_data)
   })
   
-
+  
   
   ################# Outliers Tab #################
   
-
+  
   
   outlier_jaccard <- reactive({
-    event_data("plotly_selected")
+    input$remove_outliers
     jaqs <- pmartRseq::jaccard_calc(omicsData = filtered_data())
     jaqs$jaqsID <- jaqs[, attr(jaqs,"cname")$fdata_cname]
     return(jaqs)
@@ -745,13 +667,13 @@ shinyServer(function(input, output, session) {
   jac_plot_obj <- reactive({
     plot(outlier_jaccard())
   })
-
+  
   #define global plotly style
-  f <<- list(
-    family = "Courier New, monospace",
-    size = 18,
-    color = "#7f7f7f"
-  )  
+  # f <<- list(
+  #   family = "Courier New, monospace",
+  #   size = 18,
+  #   color = "#7f7f7f"
+  # )  
   
   output$outlier_jaccard_plot <- renderPlotly({
     d <- event_data("plotly_selected")
@@ -763,15 +685,13 @@ shinyServer(function(input, output, session) {
       m <- outlier_jaccard()[outlier_jaccard()$jaqsID %in% d[["key"]], ]
       p <- add_markers(p, data = m, color = I("red"))
     }
-
+    
     
     x <- list(
-      title = "",
-      titlefont = f
+      title = ""
     )
     y <- list(
-      title = "Jaccard Dis/similarity",
-      titlefont = f
+      title = "Jaccard Dis/similarity"
     )
     p$elementId <- NULL
     layout(p, dragmode = "lasso", showlegend = FALSE, xaxis = x, yaxis = y)
@@ -808,18 +728,17 @@ shinyServer(function(input, output, session) {
       p <- add_markers(p, data = m, color = I("red"))
     }
     x <- list(
-      title = "",
-      titlefont = f
+      title = ""
     )
     y <- list(
-      title = "Abundance",
-      titlefont = f
+      title = "Abundance"
     )
     p$elementId <- NULL
     layout(p, dragmode = "lasso", showlegend = FALSE, xaxis = x, yaxis = y)  })
   
-
+  
   output$outlier_richness_plot <- renderPlotly({
+    input$remove_outliers
     d <- event_data("plotly_selected")
     long_richness <- reshape2::melt(rich_raw())
     p <- plotly::plot_ly(data = long_richness,
@@ -831,17 +750,15 @@ shinyServer(function(input, output, session) {
       p <- add_markers(p, data = m, color = I("red"))
     }
     x <- list(
-      title = "",
-      titlefont = f
+      title = ""
     )
     y <- list(
-      title = "Richness",
-      titlefont = f
+      title = "Richness"
     )
     p$elementId <- NULL
     layout(p, dragmode = "lasso", showlegend = FALSE, xaxis = x, yaxis = y)  })
   
-
+  
   
   
   # ################ Normalization Tab #################
@@ -973,10 +890,10 @@ shinyServer(function(input, output, session) {
   # Show alpha diversity plot
   output$adiv_plot <- renderPlotly({
     #plot(a_div(), x_axis=input$xaxis, color=input$color)
-  p <-  plotly::ggplotly(plot(a_div(), x_axis=input$xaxis, color=input$color, scales = 'free', samplabel = attr(normalized_data(),"cnames")$fdata_cname),
-                         tooltip = c("x", "y", "label")) #ggplotly bugs without free scale
-  p$elementId <- NULL
-  p
+    p <-  plotly::ggplotly(plot(a_div(), x_axis=input$xaxis, color=input$color, scales = 'free', samplabel = attr(normalized_data(),"cnames")$fdata_cname),
+                           tooltip = c("x", "y", "label")) #ggplotly bugs without free scale
+    p$elementId <- NULL
+    p
   })
   
   output$adiv_summary <- renderPrint({
@@ -1103,7 +1020,7 @@ shinyServer(function(input, output, session) {
   output$effsp_summary <- renderPrint({
     summary(effsp())
   })
-
+  
   
   
   ################ Beta Diversity Tab #################
@@ -1181,13 +1098,13 @@ shinyServer(function(input, output, session) {
   #   dimcheck_obj <<- reactive({
   #     goeveg::dimcheckMDS(vegdata(), distance = input$beta_index, autotransform = FALSE)
   #   })
-    output$dimcheck <- renderPlot({
-      #goeveg::dimcheckMDS(vegdata(), distance = input$beta_index, autotransform = FALSE)
-      req(input$submit_goe)
-      Sys.sleep(5)
-      # print(dimcheck_obj())
-      print(goeveg::dimcheckMDS(vegdata(), distance = input$beta_index, autotransform = FALSE))
-    })
+  output$dimcheck <- renderPlot({
+    #goeveg::dimcheckMDS(vegdata(), distance = input$beta_index, autotransform = FALSE)
+    req(input$submit_goe)
+    Sys.sleep(5)
+    # print(dimcheck_obj())
+    print(goeveg::dimcheckMDS(vegdata(), distance = input$beta_index, autotransform = FALSE))
+  })
   # })
   
   # output$ord_method <- renderUI({
@@ -1252,26 +1169,26 @@ shinyServer(function(input, output, session) {
                                 x_axis = input$ord_x, y_axis = input$ord_y, ellipses=input$ellipses)
     })
   })
-    # Plot showing beta diversity
-    output$ord_plot <- renderPlotly({
-      #if(input$ord_method == "NMDS"){
-      # pmartRseq::pmartRseq_NMDS(res = vegmds(), 
-      #           grp = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]),ellipses=input$ellipses)
-      #pmartRseq::pmartRseq_NMDS(res = vegmds(), omicsData = normalized_data(), grp = input$ord_colors, k = input$k, 
-      #                         x_axis = input$ord_x, y_axis = input$ord_y, ellipses=input$ellipses)
-      req(input$submit_ord)
-      #Sys.sleep(5)
-      #print(ord_plot_obj())
-      m <- ord_plot_obj() + theme(aspect.ratio=NULL)
-      p <- plotly::ggplotly(m, height = "100%", width = "100%")
-      p$elementId <- NULL
-      p
-      # }else if(input$ord_method == "PCA"){
-      #   mead_PCA(XX = vegmds(),
-      #            ZZ = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]))
-      # }
-    })
-
+  # Plot showing beta diversity
+  output$ord_plot <- renderPlotly({
+    #if(input$ord_method == "NMDS"){
+    # pmartRseq::pmartRseq_NMDS(res = vegmds(), 
+    #           grp = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]),ellipses=input$ellipses)
+    #pmartRseq::pmartRseq_NMDS(res = vegmds(), omicsData = normalized_data(), grp = input$ord_colors, k = input$k, 
+    #                         x_axis = input$ord_x, y_axis = input$ord_y, ellipses=input$ellipses)
+    req(input$submit_ord)
+    #Sys.sleep(5)
+    #print(ord_plot_obj())
+    m <- ord_plot_obj() + theme(aspect.ratio=NULL)
+    p <- plotly::ggplotly(m, height = "100%", width = "100%")
+    p$elementId <- NULL
+    p
+    # }else if(input$ord_method == "PCA"){
+    #   mead_PCA(XX = vegmds(),
+    #            ZZ = as.factor(attr(normalized_data(),"group_DF")[match(rownames(vegdata()), attr(normalized_data(),"group_DF")[,attr(normalized_data(),"cnames")$fdata_cname]),input$ord_colors]))
+    # }
+  })
+  
   
   
   ################ Differential Abundance Tab #################
@@ -1323,78 +1240,78 @@ shinyServer(function(input, output, session) {
   })
   
   #observeEvent(input$submit_da, {
-    # Calculate normalization factors to use in differential abundance test - will use the same that was used on normalization tab
-    norm_factors <- reactive({
-      validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
-      validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css","log","clr","none"), "Normalization function must be one of the options specified."))
-      
-      return(pmartRseq::normalize_data(omicsData=filtered_data(), norm_fn=input$normFunc, normalize=FALSE))
-    })
+  # Calculate normalization factors to use in differential abundance test - will use the same that was used on normalization tab
+  norm_factors <- reactive({
+    validate(need(length(input$normFunc) == 1, "Need to specify a normalization function."))
+    validate(need(input$normFunc %in% c("percentile","tss","rarefy","poisson","deseq","tmm","css","log","clr","none"), "Normalization function must be one of the options specified."))
     
-    comps <- reactive({
-      tmp1 <- lapply(input$comparisons, function(x) strsplit(x, "  VS  ")[[1]][1])
-      tmp1 <- do.call(cbind, tmp1)
-      tmp2 <- lapply(input$comparisons, function(x) strsplit(x, "  VS  ")[[1]][2])
-      tmp2 <- do.call(cbind, tmp2)
-      tmp <- lapply(c(1:length(tmp1)), function(x) c(tmp1[x],tmp2[x]))
-      return(tmp)
-    })
+    return(pmartRseq::normalize_data(omicsData=filtered_data(), norm_fn=input$normFunc, normalize=FALSE))
+  })
+  
+  comps <- reactive({
+    tmp1 <- lapply(input$comparisons, function(x) strsplit(x, "  VS  ")[[1]][1])
+    tmp1 <- do.call(cbind, tmp1)
+    tmp2 <- lapply(input$comparisons, function(x) strsplit(x, "  VS  ")[[1]][2])
+    tmp2 <- do.call(cbind, tmp2)
+    tmp <- lapply(c(1:length(tmp1)), function(x) c(tmp1[x],tmp2[x]))
+    return(tmp)
+  })
+  
+  # Perform differential abundance analysis
+  diffabun_res <<- reactive({
+    req(input$submit_da)
+    validate(need(length(input$da_index) == 1, "Need to specify a differential abundance test"))
+    validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
     
-    # Perform differential abundance analysis
-    diffabun_res <<- reactive({
-      req(input$submit_da)
-      validate(need(length(input$da_index) == 1, "Need to specify a differential abundance test"))
-      validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
-      
-      if(input$normFunc %in% c("rarefy","log","clr")){
-        return(pmartRseq::countSTAT(omicsData = normalized_data(), norm_factors = norm_factors()$scale_param, comparisons = comps(), control = NULL, test = input$da_index, pval_adjust = input$pval_adjust, pval_thresh = 0.05))
-      }else{
-        return(pmartRseq::countSTAT(omicsData = filtered_data(), norm_factors = norm_factors()$scale_param, comparisons = comps(), control = NULL, test = input$da_index, pval_adjust = input$pval_adjust, pval_thresh = 0.05))
-      }
-      
-    })
+    if(input$normFunc %in% c("rarefy","log","clr")){
+      return(pmartRseq::countSTAT(omicsData = normalized_data(), norm_factors = norm_factors()$scale_param, comparisons = comps(), control = NULL, test = input$da_index, pval_adjust = input$pval_adjust, pval_thresh = 0.05))
+    }else{
+      return(pmartRseq::countSTAT(omicsData = filtered_data(), norm_factors = norm_factors()$scale_param, comparisons = comps(), control = NULL, test = input$da_index, pval_adjust = input$pval_adjust, pval_thresh = 0.05))
+    }
     
-    # Look at the results - this is hard to look at, maybe remove?
-    output$da_res <- renderDataTable({
-      req(input$submit_da)
-      diffabun_res()$allResults
-      })
+  })
+  
+  # Look at the results - this is hard to look at, maybe remove?
+  output$da_res <- renderDataTable({
+    req(input$submit_da)
+    diffabun_res()$allResults
+  })
+  
+  output$da_summary <- renderPrint({
+    req(input$submit_da)
+    summary(diffabun_res())
+  })
+  
+  da_flag_plot_obj <<- reactive({
+    plot(diffabun_res(), type = "flag")
+  })
+  # Plot showing number differentially abundant in each comparison and direction of change
+  output$flag_plot <- renderPlot({
+    req(input$submit_da)
     
-    output$da_summary <- renderPrint({
-      req(input$submit_da)
-      summary(diffabun_res())
-    })
-    
-    da_flag_plot_obj <<- reactive({
-      plot(diffabun_res(), type = "flag")
-    })
-    # Plot showing number differentially abundant in each comparison and direction of change
-    output$flag_plot <- renderPlot({
-      req(input$submit_da)
-      
-      #plot(diffabun_res(), type = "flag")
-      print(da_flag_plot_obj())
-    })
-    
-    da_logfc_plot_obj <<- reactive({
-      plot(diffabun_res(), type = "logfc")
-    })
-    # Heatmap showing the log2foldchanges of differentially abundant features
-    output$logfc_plot <- renderPlot({
-      req(input$submit_da)
-      #plot(diffabun_res(), type = "logfc")
-      print(da_logfc_plot_obj())
-    })
-    
-    plot_all_da_obj <<- reactive({
-      pmartRseq::plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2", x_lab = "Phylum")
-    })
-    # Plot showing log fold changes and p-values of all features, grouped by taxonomy
-    output$plot_all_da <- renderPlot({
-      req(input$submit_da)
-      #pmartRseq::plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2", x_lab = "Phylum")
-      print(plot_all_da_obj())
-    })
+    #plot(diffabun_res(), type = "flag")
+    print(da_flag_plot_obj())
+  })
+  
+  da_logfc_plot_obj <<- reactive({
+    plot(diffabun_res(), type = "logfc")
+  })
+  # Heatmap showing the log2foldchanges of differentially abundant features
+  output$logfc_plot <- renderPlot({
+    req(input$submit_da)
+    #plot(diffabun_res(), type = "logfc")
+    print(da_logfc_plot_obj())
+  })
+  
+  plot_all_da_obj <<- reactive({
+    pmartRseq::plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2", x_lab = "Phylum")
+  })
+  # Plot showing log fold changes and p-values of all features, grouped by taxonomy
+  output$plot_all_da <- renderPlot({
+    req(input$submit_da)
+    #pmartRseq::plot_all_diffabun(countSTAT_results = diffabun_res(), omicsData = normalized_data(), x_axis = "taxonomy2", x_lab = "Phylum")
+    print(plot_all_da_obj())
+  })
   #}, autoDestroy = FALSE)
   
   ################ Indicator Species Tab #################
@@ -1416,56 +1333,56 @@ shinyServer(function(input, output, session) {
   })
   
   #observeEvent(input$submit_is, {
-    indsp_res <<- reactive({
-      req(input$submit_is)
-      if(input$within == "NA"){
-        return(pmartRseq::indsp_calc(omicsData = normalized_data(), within = NULL, pval_thresh = input$is_pval_thresh))
-      }else{
-        return(pmartRseq::indsp_calc(omicsData = normalized_data(), within = input$within, pval_thresh = input$is_pval_thresh))
-      }
-    })
-    
-    output$indsp_results <- renderDataTable({
-      req(input$submit_is)
-      indsp_res()
-      })
-    
-    output$indsp_summary <- renderPrint({
-      req(input$submit_is)
-      summary(indsp_res())
-    })
-    
-    
-    output$indsp_xaxis <- renderUI({
-      req(input$submit_is)
-      selectInput("indsp_xaxis",
-                  label = "X-Axis for Indicator Species Plot",
-                  choices = colnames(attr(normalized_data(),"group_DF"))[-which(colnames(attr(normalized_data(),"group_DF"))==attr(normalized_data(),"cnames")$fdata_cname)],
-                  selected = "Group")
-    })
-    
-    output$indsp_group <- renderUI({
-      req(input$submit_is)
-      selectInput("indsp_group",
-                  label = "Fill Variable for Indicator Species Plot",
-                  choices = colnames(normalized_data()$e_meta),
-                  selected = colnames(normalized_data()$e_meta)[3])
-    })
-    
-    indsp_plot_obj <<- reactive({
-      validate(need(!is.null(indsp_res()), message = "Sumbit analysis"),
-               need(!is.null(input$indsp_xaxis), message = "Please wait...getting x-axis together"))
-      pmartRseq::plot_indsp(indsp = indsp_res(), omicsData = normalized_data(), x_axis = , group = input$indsp_group)
-    })
-    output$indsp_plot <- renderPlotly({
-      validate(need(!is.null(indsp_plot_obj()), message = "Sumbit analysis"))
-      req(input$submit_is)
-      #pmartRseq::plot_indsp(indsp = indsp_res(), omicsData = normalized_data(), x_axis = input$indsp_xaxis, group = input$indsp_group)
-      m <- indsp_plot_obj()+theme(axis.text.y = element_blank(), aspect.ratio=NULL)
-      p <- plotly::ggplotly(m, tooltip = c("x", "y", "fill"), width = "100%", height = "100%")
-      p$elementId <- NULL
-      p
-    })
+  indsp_res <<- reactive({
+    req(input$submit_is)
+    if(input$within == "NA"){
+      return(pmartRseq::indsp_calc(omicsData = normalized_data(), within = NULL, pval_thresh = input$is_pval_thresh))
+    }else{
+      return(pmartRseq::indsp_calc(omicsData = normalized_data(), within = input$within, pval_thresh = input$is_pval_thresh))
+    }
+  })
+  
+  output$indsp_results <- renderDataTable({
+    req(input$submit_is)
+    indsp_res()
+  })
+  
+  output$indsp_summary <- renderPrint({
+    req(input$submit_is)
+    summary(indsp_res())
+  })
+  
+  
+  output$indsp_xaxis <- renderUI({
+    req(input$submit_is)
+    selectInput("indsp_xaxis",
+                label = "X-Axis for Indicator Species Plot",
+                choices = colnames(attr(normalized_data(),"group_DF"))[-which(colnames(attr(normalized_data(),"group_DF"))==attr(normalized_data(),"cnames")$fdata_cname)],
+                selected = "Group")
+  })
+  
+  output$indsp_group <- renderUI({
+    req(input$submit_is)
+    selectInput("indsp_group",
+                label = "Fill Variable for Indicator Species Plot",
+                choices = colnames(normalized_data()$e_meta),
+                selected = colnames(normalized_data()$e_meta)[3])
+  })
+  
+  indsp_plot_obj <<- reactive({
+    validate(need(!is.null(indsp_res()), message = "Sumbit analysis"),
+             need(!is.null(input$indsp_xaxis), message = "Please wait...getting x-axis together"))
+    pmartRseq::plot_indsp(indsp = indsp_res(), omicsData = normalized_data(), x_axis = , group = input$indsp_group)
+  })
+  output$indsp_plot <- renderPlotly({
+    validate(need(!is.null(indsp_plot_obj()), message = "Sumbit analysis"))
+    req(input$submit_is)
+    #pmartRseq::plot_indsp(indsp = indsp_res(), omicsData = normalized_data(), x_axis = input$indsp_xaxis, group = input$indsp_group)
+    m <- indsp_plot_obj()+theme(axis.text.y = element_blank(), aspect.ratio=NULL)
+    p <- plotly::ggplotly(m, tooltip = c("x", "y", "fill"), width = "100%", height = "100%")
+    p$elementId <- NULL
+    p
+  })
   #}, autoDestroy = FALSE)
   
   
@@ -1541,16 +1458,16 @@ shinyServer(function(input, output, session) {
   
   ################ ALDEx2 Tab #################
   #----------- aldex2 ----------#
-
+  
   # Select which variables to use as main effects
   output$pa_mainEffects <- renderUI({
-      selectInput("pa_mainEffects",
-                  label = "Main Effect(s) to use in Model",
-                  choices = c("NA"="NULL",colnames(filtered_data()$f_data)[group_vars()]),
-                  selected = "NULL",
-                  multiple = TRUE)
+    selectInput("pa_mainEffects",
+                label = "Main Effect(s) to use in Model",
+                choices = c("NA"="NULL",colnames(filtered_data()$f_data)[group_vars()]),
+                selected = "NULL",
+                multiple = TRUE)
   })
-
+  
   # Select which variables to use as random effects
   output$pa_randomEffect <- renderUI({
     selectInput("pa_randomEffect",
@@ -1559,75 +1476,75 @@ shinyServer(function(input, output, session) {
                 selected = "NULL",
                 multiple = TRUE)
   })
-
+  
   output$pa_Interactions <- renderUI({
     checkboxInput("pa_Interactions",
                   label = "Include Interactions",
                   value=FALSE)
   })
-
+  
   output$mcsamples <- renderUI({
     numericInput("mcsamples",
                  label="Number of Monte Carlo Samples",
                  value=128)
   })
-
-
+  
+  
   #observeEvent(input$submit_pa, {
-
-    # Perform differential abundance analysis
-    pa_results <<- reactive({
-      req(input$submit_pa)
-      validate(need(length(input$mcsamples) == 1, "Need to specify number of Monte Carlo samples"))
-      #validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
-
-      if("NULL" %in% input$pa_mainEffects){
-          pa_mE <- NULL
-      }else{
-        pa_mE <- input$pa_mainEffects
-      }
-      
-      if("NULL" %in% input$pa_randomEffect){
-        pa_rE <- NULL
-      }else{
-        pa_rE <- input$pa_randomEffect
-      }
-      
-      return(pmartRseq::pmartRseq_aldex2(omicsData = filtered_data(), mainEffects = pa_mE, randomEffect = pa_rE, interactions = input$pa_Interactions, mc.samples = input$mcsamples))
-
-    })
-
-    # Look at the results - this is hard to look at, maybe remove?
-    output$pa_res <- renderDataTable({
-      req(input$submit_pa)
-      pa_results()$results
-      })
-
-    output$pa_summary <- renderPrint({
-      req(input$submit_pa)
-      summary(pa_results())
-    })
-
-    pa_pval_plot_obj <<- reactive({
-      plot(pa_results(), type = "pvals")
-    })
-    # Heatmap showing the log2foldchanges of differentially abundant features
-    output$pa_pval_plot <- renderPlot({
-      req(input$submit_pa)
-      #plot(diffabun_res(), type = "logfc")
-      print(pa_pval_plot_obj())
-    })
-
-    pa_flag_plot_obj <<- reactive({
-      plot(pa_results(), type = "flag")
-    })
-    # Plot showing number differentially abundant in each comparison and direction of change
-    output$pa_flag_plot <- renderPlot({
-      req(input$submit_pa)
-      #plot(diffabun_res(), type = "flag")
-      print(pa_flag_plot_obj())
-    })
-
+  
+  # Perform differential abundance analysis
+  pa_results <<- reactive({
+    req(input$submit_pa)
+    validate(need(length(input$mcsamples) == 1, "Need to specify number of Monte Carlo samples"))
+    #validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
+    
+    if("NULL" %in% input$pa_mainEffects){
+      pa_mE <- NULL
+    }else{
+      pa_mE <- input$pa_mainEffects
+    }
+    
+    if("NULL" %in% input$pa_randomEffect){
+      pa_rE <- NULL
+    }else{
+      pa_rE <- input$pa_randomEffect
+    }
+    
+    return(pmartRseq::pmartRseq_aldex2(omicsData = filtered_data(), mainEffects = pa_mE, randomEffect = pa_rE, interactions = input$pa_Interactions, mc.samples = input$mcsamples))
+    
+  })
+  
+  # Look at the results - this is hard to look at, maybe remove?
+  output$pa_res <- renderDataTable({
+    req(input$submit_pa)
+    pa_results()$results
+  })
+  
+  output$pa_summary <- renderPrint({
+    req(input$submit_pa)
+    summary(pa_results())
+  })
+  
+  pa_pval_plot_obj <<- reactive({
+    plot(pa_results(), type = "pvals")
+  })
+  # Heatmap showing the log2foldchanges of differentially abundant features
+  output$pa_pval_plot <- renderPlot({
+    req(input$submit_pa)
+    #plot(diffabun_res(), type = "logfc")
+    print(pa_pval_plot_obj())
+  })
+  
+  pa_flag_plot_obj <<- reactive({
+    plot(pa_results(), type = "flag")
+  })
+  # Plot showing number differentially abundant in each comparison and direction of change
+  output$pa_flag_plot <- renderPlot({
+    req(input$submit_pa)
+    #plot(diffabun_res(), type = "flag")
+    print(pa_flag_plot_obj())
+  })
+  
   #}, autoDestroy = FALSE)
   
   ################ Network Analysis Tab #################
@@ -1661,10 +1578,10 @@ shinyServer(function(input, output, session) {
   # Select if should use 0 or NA for missing values
   output$na_missingval <- renderUI({
     selectInput("na_missingval",
-                  label = "Which to use for 'missing' values",
-                  choices = c("NA",0),
-                  selected = 0,
-                  multiple = FALSE)
+                label = "Which to use for 'missing' values",
+                choices = c("NA",0),
+                selected = 0,
+                multiple = FALSE)
   })
   
   # igraph corr coeff cutoff
@@ -1748,107 +1665,107 @@ shinyServer(function(input, output, session) {
   
   
   #observeEvent(input$submit_na, {
+  
+  # Perform differential abundance analysis
+  na_network <<- reactive({
+    req(input$submit_na)
+    validate(need(length(input$na_missingval) == 1, "Need to specify what value to use for missing values"))
+    #validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
     
-    # Perform differential abundance analysis
-    na_network <<- reactive({
-      req(input$submit_na)
-      validate(need(length(input$na_missingval) == 1, "Need to specify what value to use for missing values"))
-      #validate(need(length(input$pval_adjust) == 1, "Need to specify a p-value adjustment method"))
-      
-      if(!input$na_group){
+    if(!input$na_group){
+      na_group_var <- NULL
+      na_group <- FALSE
+    }else{
+      na_group <- TRUE
+      if(input$na_group_var == "NA"){
         na_group_var <- NULL
-        na_group <- FALSE
       }else{
-        na_group <- TRUE
-        if(input$na_group_var == "NA"){
-          na_group_var <- NULL
-        }else{
-          na_group_var <- input$na_group_var
-        }
+        na_group_var <- input$na_group_var
       }
-      
-      return(pmartRseq::network_calc(omicsData = normalized_data(), type="spearman", group=na_group, group_var=na_group_var, fdr_method="fndr", missing_val=input$na_missingval))
-    })
+    }
     
-    na_igraph <<- reactive({
-      req(input$submit_na)
-      validate(need(length(input$na_missingval) == 1, "Need to specify what value to use for missing values"))
-      
-      return(pmartRseq::pmartRseq_igraph(netData = na_network(), coeff = input$na_coeff, qval = input$na_qval, pval = NULL))
-    })
+    return(pmartRseq::network_calc(omicsData = normalized_data(), type="spearman", group=na_group, group_var=na_group_var, fdr_method="fndr", missing_val=input$na_missingval))
+  })
+  
+  na_igraph <<- reactive({
+    req(input$submit_na)
+    validate(need(length(input$na_missingval) == 1, "Need to specify what value to use for missing values"))
     
-    na_network_plot <<- reactive({
-      req(input$submit_na)
-      if(input$na_colour != "NA"){
-        na_colour <- input$na_colour
-      }else{
-        na_colour <- NULL
-      }
-      return(pmartRseq::network_plot(netGraph=na_igraph(), omicsData=normalized_data(), modData=NULL, colour=na_colour, vsize=input$na_size, legend.show=TRUE, legend.pos="bottomleft"))
-    })
-    
-    # Network Plot
-    output$na_network_plot <- renderPlot({
-      req(input$submit_na)
-      #plot(diffabun_res(), type = "logfc")
-      print(na_network_plot())
-    })
- # }, autoDestroy = FALSE)
-    
+    return(pmartRseq::pmartRseq_igraph(netData = na_network(), coeff = input$na_coeff, qval = input$na_qval, pval = NULL))
+  })
+  
+  na_network_plot <<- reactive({
+    req(input$submit_na)
+    if(input$na_colour != "NA"){
+      na_colour <- input$na_colour
+    }else{
+      na_colour <- NULL
+    }
+    return(pmartRseq::network_plot(netGraph=na_igraph(), omicsData=normalized_data(), modData=NULL, colour=na_colour, vsize=input$na_size, legend.show=TRUE, legend.pos="bottomleft"))
+  })
+  
+  # Network Plot
+  output$na_network_plot <- renderPlot({
+    req(input$submit_na)
+    #plot(diffabun_res(), type = "logfc")
+    print(na_network_plot())
+  })
+  # }, autoDestroy = FALSE)
+  
   #observeEvent(input$submit_modules, {
-    # Network indices
-    na_net_indc <<- reactive({
-      req(input$submit_modules)
-      validate(need(exists(na_igraph()), "network graph object must be created first"))
-      
-      return(pmartRseq::network_indices(netGraph = na_igraph()))
-    })
+  # Network indices
+  na_net_indc <<- reactive({
+    req(input$submit_modules)
+    validate(need(exists(na_igraph()), "network graph object must be created first"))
     
-    # Modules
-    na_mods <<- reactive({
-      req(input$submit_modules)
-      validate(need(length(input$na_cluster) == 1, "Need to specify a clustering algorithm to use"))
-      validate(need(length(input$na_mod_size) == 1, "Need to specify a minimum module size"))
-      
-      return(pmartRseq::detect_modules(netGraph = na_igraph(), cluster = input$na_cluster, cutoff = input$na_mod_size))
-    })
+    return(pmartRseq::network_indices(netGraph = na_igraph()))
+  })
+  
+  # Modules
+  na_mods <<- reactive({
+    req(input$submit_modules)
+    validate(need(length(input$na_cluster) == 1, "Need to specify a clustering algorithm to use"))
+    validate(need(length(input$na_mod_size) == 1, "Need to specify a minimum module size"))
     
-    na_env <<- reactive({
-      req(input$submit_modules)
-      validate(need(length(input$na_envvars) >= 1, "Need to specify environmental variables"))
-      
-      return(pmartRseq::mod_env(omicsData = normalized_data(), modData = na_mods(), envVars = input$na_envvars, pca.method="svd", cor.method="spearman", use="pairwise", padjust="BH"))
-    })
+    return(pmartRseq::detect_modules(netGraph = na_igraph(), cluster = input$na_cluster, cutoff = input$na_mod_size))
+  })
+  
+  na_env <<- reactive({
+    req(input$submit_modules)
+    validate(need(length(input$na_envvars) >= 1, "Need to specify environmental variables"))
     
-    mod_plot <<- reactive({
-      req(input$submit_modules)
-      validate(need(length(input$na_size) == 1, "Need to specify vertex size"))
-      
-      return(pmartRseq::network_plot(netGraph = na_igraph(), omicsData = normalized_data(), modData = na_mods(), colour = "Module", vsize = input$na_size, legend.show=TRUE, legend.pos = "bottomleft"))
-    })
+    return(pmartRseq::mod_env(omicsData = normalized_data(), modData = na_mods(), envVars = input$na_envvars, pca.method="svd", cor.method="spearman", use="pairwise", padjust="BH"))
+  })
+  
+  mod_plot <<- reactive({
+    req(input$submit_modules)
+    validate(need(length(input$na_size) == 1, "Need to specify vertex size"))
     
-    output$na_mod_plot <- renderPlot({
-      req(input$submit_modules)
-      print(mod_plot())
-    })
+    return(pmartRseq::network_plot(netGraph = na_igraph(), omicsData = normalized_data(), modData = na_mods(), colour = "Module", vsize = input$na_size, legend.show=TRUE, legend.pos = "bottomleft"))
+  })
+  
+  output$na_mod_plot <- renderPlot({
+    req(input$submit_modules)
+    print(mod_plot())
+  })
   #},autoDestroy = FALSE)
   
   #observeEvent(input$submit_envvars, {
-    mod_env_plot <<- reactive({
-      req(input$submit_envvars)
-      validate(need(length(input$env_pval) == 1, "Need to specify a p-value cutoff for module and environmental variable correlations"))
-      
-      return(plot(na_env(), pval.thresh=input$env_pval))
-    })
+  mod_env_plot <<- reactive({
+    req(input$submit_envvars)
+    validate(need(length(input$env_pval) == 1, "Need to specify a p-value cutoff for module and environmental variable correlations"))
     
-    # EnvVars Plot
-    output$na_envvars_plot <- renderPlot({
-      req(input$submit_envvars)
-      #plot(diffabun_res(), type = "logfc")
-      print(mod_env_plot())
-    })
-    
- # },autoDestroy = FALSE)
+    return(plot(na_env(), pval.thresh=input$env_pval))
+  })
+  
+  # EnvVars Plot
+  output$na_envvars_plot <- renderPlot({
+    req(input$submit_envvars)
+    #plot(diffabun_res(), type = "logfc")
+    print(mod_env_plot())
+  })
+  
+  # },autoDestroy = FALSE)
   
   ################ Download Tab #################
   output$files_to_download <- renderUI({
