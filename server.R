@@ -15,6 +15,13 @@ options(shiny.maxRequestSize=30*1024^2)
 filtered_rRNA_obj <- list()
 
 shinyServer(function(input, output, session) {
+  #define global plotly style
+  f <<- list(
+    family = "Arial",
+    size = 18,
+    color = "#7f7f7f"
+  )  
+  
   #---------- listen for session reset -------#
   observeEvent(input$reset_button, {js$reset()}) 
   #---------- rRNA object import -------------#
@@ -692,28 +699,42 @@ shinyServer(function(input, output, session) {
     return(pmartRseq::sample_based_filter(omicsData = filtered_rRNA_obj, fn = "criteria"))
   })
   
-  observeEvent(input$remove_outliers, priority = 2, {
+  observeEvent(input$remove_outliers, priority = 10, {
     filters$outliers[[input$remove_outliers]] <- outlier_filter_obj()
-    filtO <- pmartRseq::applyFilt(omicsData = filtered_rRNA_obj, outlier_filter_obj(), samps_to_remove =  outlier_jaccard()[outlier_jaccard()$jaqsID %in% selected_outliers()[["key"]], "jaqsID"])
-    filtered_rRNA_obj <<- filtO
+    filtered_rRNA_obj <<- pmartRseq::applyFilt(omicsData = filtered_rRNA_obj, outlier_filter_obj(), samps_to_remove =  jaccard_outliers()[jaccard_outliers()$jaqsID %in% selected_outliers()[["key"]], "jaqsID"])
+    # filtered_rRNA_obj <<- filtO
   })
+  
+  # filtered_data <- reactive({
+  #   event_data("plotly_selected")
+  #   input$gdfMainEffect
+  #   input$metadata_filter_go
+  #   input$metadata_reset_button
+  #   input$sample_filter_go
+  #   input$sample_reset_button
+  #   input$otu_filter_go
+  #   input$otu_reset_button
+  #   input$taxa_filter_go
+  #   input$taxa_reset_button
+  #   input$remove_outliers
+  #   return(filtered_rRNA_obj)
+  # })
   
   filtered_data <- reactive({
-    event_data("plotly_selected")
-    input$gdfMainEffect
-    input$metadata_filter_go
-    input$metadata_reset_button
-    input$sample_filter_go
-    input$sample_reset_button
-    input$otu_filter_go
-    input$otu_reset_button
-    input$taxa_filter_go
-    input$taxa_reset_button
-    input$remove_outliers
-    return(filtered_rRNA_obj)
-  })
-  
-  
+               input$gdfMainEffect
+               input$metadata_filter_go
+               input$metadata_reset_button
+               input$sample_filter_go
+               input$sample_reset_button
+               input$otu_filter_go
+               input$otu_reset_button
+               input$taxa_filter_go
+               input$taxa_reset_button
+                 if (renderFlag$redraw) {
+                   return(isolate(filtered_rRNA_obj))
+                 }
+                 return(filtered_rRNA_obj)
+               })
   
   output$summ_filt <- renderPrint({
     validate(
@@ -733,58 +754,67 @@ shinyServer(function(input, output, session) {
   
   ################# Outliers Tab #################
   
-
+  # create an observer that rerenders plots when outliers are filtered out
+  renderFlag <- reactiveValues(redraw = FALSE)
+  observeEvent(input$remove_outliers, {
+    renderFlag$redraw <- TRUE
+  }, priority = 10)
   
-  outlier_jaccard <- reactive({
-    event_data("plotly_selected")
+  observeEvent(event_data("plotly_selected"), {
+    renderFlag$redraw <- FALSE
+  }, priority = 10)
+
+
+  # create three different plots for outlier views
+  jaccard_outliers <- reactive({
     jaqs <- pmartRseq::jaccard_calc(omicsData = filtered_data())
     jaqs$jaqsID <- jaqs[, attr(jaqs,"cname")$fdata_cname]
     return(jaqs)
   })
   
+  # keep a static copy for report download
   jac_plot_obj <- reactive({
-    plot(outlier_jaccard())
+    event_data("plotly_selected")
+    plot(jaccard_outliers())
   })
 
-  #define global plotly style
-  f <<- list(
-    family = "Courier New, monospace",
-    size = 18,
-    color = "#7f7f7f"
-  )  
   
   output$outlier_jaccard_plot <- renderPlotly({
-    d <- event_data("plotly_selected")
-    p <- plotly::plot_ly(data = outlier_jaccard(),
-                         x = ~jaqsID,
-                         y = ~Average) %>%
-      add_markers(key = ~jaqsID, color = I("black"))
-    if (!is.null(d)) {
-      m <- outlier_jaccard()[outlier_jaccard()$jaqsID %in% d[["key"]], ]
-      p <- add_markers(p, data = m, color = I("red"))
+    if (renderFlag$redraw) {
+      d <- NULL
+    } else {
+      d <- event_data("plotly_selected")
     }
-
-    
-    x <- list(
-      title = "",
-      titlefont = f
-    )
-    y <- list(
-      title = "Jaccard Dis/similarity",
-      titlefont = f
-    )
-    p$elementId <- NULL
-    layout(p, dragmode = "lasso", showlegend = FALSE, xaxis = x, yaxis = y)
-    
+      p <- plotly::plot_ly(data = jaccard_outliers(),
+                           x = ~jaqsID,
+                           y = ~Average) %>%
+        add_markers(key = ~jaqsID, color = I("black"))
+      if (!is.null(d)) {
+        m <- jaccard_outliers()[jaccard_outliers()$jaqsID %in% d[["key"]], ]
+        p <- add_markers(p, data = m, color = I("red"))
+      }
+      x <- list(
+        title = "",
+        titlefont = f
+      )
+      y <- list(
+        title = "Jaccard Similarity",
+        titlefont = f
+      )
+      p$elementId <- NULL
+      layout(p, dragmode = "lasso", showlegend = FALSE, xaxis = x, yaxis = y)
   })
   
   selected_outliers <- reactive({
-    input$remove_outliers
-    event_data("plotly_selected")
+    if(renderFlag$redraw){
+      return(NULL)
+    } else {
+      return(event_data("plotly_selected"))
+    }
   })
   
   output$audies <- renderTable({
-    outlier_jaccard()[outlier_jaccard()$jaqsID %in% selected_outliers()[["key"]], ]
+    jaccard_outliers()[jaccard_outliers()$jaqsID %in% selected_outliers()[["key"]], ]
   })
   
   
@@ -798,7 +828,11 @@ shinyServer(function(input, output, session) {
   })
   
   output$outlier_abundance_plot <- renderPlotly({
-    d <- event_data("plotly_selected")
+    if (renderFlag$redraw) {
+      d <- NULL
+    } else {
+      d <- event_data("plotly_selected")
+    }
     p <- plotly::plot_ly(data = data.frame(abundance()),
                          x = ~abundID,
                          y = ~abundance) %>%
@@ -818,10 +852,20 @@ shinyServer(function(input, output, session) {
     p$elementId <- NULL
     layout(p, dragmode = "lasso", showlegend = FALSE, xaxis = x, yaxis = y)  })
   
+  richness <- reactive({
+    event_data("plotly_selected")
+    input$remove_outliers
+    return(suppressWarnings(pmartRseq::richness_calc(filtered_data(), index="observed")))
+  })
 
   output$outlier_richness_plot <- renderPlotly({
-    d <- event_data("plotly_selected")
-    long_richness <- reshape2::melt(rich_raw())
+    
+    if (renderFlag$redraw) {
+      d <- NULL
+    } else {
+      d <- event_data("plotly_selected")
+    }
+    long_richness <- reshape2::melt(richness())
     p <- plotly::plot_ly(data = long_richness,
                          x = ~variable,
                          y = ~value) %>%
@@ -903,8 +947,8 @@ shinyServer(function(input, output, session) {
   
   # Calculate richness on raw data
   rich_raw <- reactive({
-    event_data("plotly_selected")
-    input$remove_outliers
+    # event_data("plotly_selected")
+    # input$remove_outliers
     return(suppressWarnings(pmartRseq::richness_calc(filtered_data(), index="observed")))
   })
   
@@ -1911,7 +1955,7 @@ shinyServer(function(input, output, session) {
         ggsave(ra_norm_plot(), filename="abun_rich_norm.png", device="png")
       }
       if("outliers" %in% input$files_to_download){
-        rep$jaccard <- outlier_jaccard()
+        rep$jaccard <- jaccard_outliers()
         fs <- c(fs, "outliers.png")
         ggsave(jac_plot_obj(), filename="outliers.png", device="png")
       }
