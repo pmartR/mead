@@ -13,15 +13,15 @@ if (!("pmartRseq" %in% packs)) devtools::install("../../pmartRseq/")
 if (!("DESeq2" %in% packs)){
   source("https://bioconductor.org/biocLite.R")
   biocLite("DESeq2")
-} 
+}
 if (!("edgeR" %in% packs)){
   source("https://bioconductor.org/biocLite.R")
   biocLite("edgeR")
-} 
+}
 if (!("ALDEx2" %in% packs)){
   source("https://bioconductor.org/biocLite.R")
   biocLite("ALDEx2")
-} 
+}
 
 #check for missing packages
 missing <- dependencies[!(dependencies %in% packs)]
@@ -31,7 +31,7 @@ if (length(missing) > 0) install.packages(missing, dependencies = TRUE)
 
 # source packages and functions
 library(shiny)
-library(shinyjs) 
+library(shinyjs)
 library(V8)
 library(lazyeval)
 library(dplyr)
@@ -107,10 +107,10 @@ tagList(
           ),
           h4("If the selected identifiers are not correct, use the dropdowns below to change them"),
           fluidRow(
-            column(width = 6, 
+            column(width = 6,
             uiOutput("new_edata_cname")
             ),
-            column(width = 6, 
+            column(width = 6,
                    uiOutput("new_fdata_cname")
             )
           ),
@@ -187,7 +187,7 @@ tagList(
            # br(),
            # hr(),
            fluidRow(
-             column(width = 4, 
+             column(width = 4,
                     h4("Sample Reads"),
                     p("Keep samples above a minimum number of reads"),
                     fluidRow(
@@ -235,15 +235,14 @@ tagList(
              actionButton("taxa_filter_go", label = "Apply Taxa Filter", icon = icon("bar-chart"))
            ),
            br()
-    ),#end filtering
- 
+    ),
+
   # tabPanel("Group Designation",
   #          #verbatimTextOutput("summ_filt"),
   #          #verbatimTextOutput("nrow_edata"),
-  #         
+  #
   #  ),
 
-#---------------- Outliers ----------------#   
  tabPanel("Outliers",
           p("Use the Jaccard Index to look for other outliers in the dataset."),
           br(),
@@ -265,7 +264,7 @@ tagList(
             column(width = 4,
                    plotlyOutput("outlier_richness_plot", height = 300)
             )
-                   
+
             ),
           br(),
           fluidRow(
@@ -286,7 +285,7 @@ tagList(
              and abundance. If it doesn't appear to, a different normalization
              function might be preferable."),
            fluidRow(
-             splitLayout(cellWidths = c("50%","50%"), 
+             splitLayout(cellWidths = c("50%","50%"),
                          plotlyOutput("ra_raw"),
                          plotlyOutput("ra_norm"))
            ),
@@ -374,6 +373,7 @@ tagList(
  tabPanel("Indicator Species",
           h3("Parameters"),
           uiOutput("within"),
+          uiOutput("max_indsp_grp"),
           uiOutput("is_pval_thresh"),
           actionButton(
             inputId = "submit_is",
@@ -385,7 +385,7 @@ tagList(
           uiOutput("indsp_group"),
           plotlyOutput("indsp_plot", width = "100%")
   ),
- 
+
  tabPanel("Statistics Results",
           conditionalPanel(
             condition = "input.submit_is == TRUE && input.submit_da == TRUE",
@@ -465,7 +465,7 @@ tagList(
           ),
           withSpinner(plotOutput("na_envvars_plot"))
           ),
- 
+
  tabPanel("Download",
           uiOutput("files_to_download"),
           downloadButton("downloadData","Download")
