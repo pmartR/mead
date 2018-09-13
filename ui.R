@@ -52,50 +52,50 @@ source("./functions/test_functions.R")
 # create a reset session button using a js method
 #jsResetCode <- "shinyjs.reset = function() {history.go(0)}"
 tagList(
+  tags$head(tags$style(
+    HTML('
+         #whitepanel {
+         background-color: white;
+         }')
+  )),
   navbarPage(title = div(img(src = "Honey_Jar.png", height = 30, width = 15), "mead"),
         windowTitle = "mead",
-        #theme = "yeti.css",
+        theme = "spacelab.css",
 
 # titlePanel(div(img(src = "Honey_Jar.png", height = 33, width = 22), "mead")),
  
 #---------------- Load Data Page ----------------#
- tabPanel("Data", 
-          tags$head(
-          ),
-          # fluidRow(column(width = 12,
-          #                 useShinyjs(),                                           
-          #                 extendShinyjs(text = jsResetCode),                     
-          #                 actionButton("reset_button", "Reset All") 
-          #                 )
-          #   
-          # ),
-
+# navbarMenu("Welcome",
+#            # tabPanel(title = "Introduction",
+#            #             includeHTML("./intropage.html")),
+#            tabPanel(title = "Introduction", class = "background_FTICR",
+#                     includeMarkdown("./Welcome to FREDA.md")),
+#            tabPanel(title = "Data Requirements", class = "background_FTICR",
+#                     includeMarkdown("./DataRequirements.md"),
+#                     # DT::dataTableOutput("example_meta_table"), # in case we want a preview of the data
+#                     # DT::dataTableOutput("example_data_table"),
+#                     downloadButton('downloadData', 'Download')),
+#            tabPanel(title = "Resources", class = "background_FTICR",
+#                     HTML('<h4> Resources </h4>')),
+#            tabPanel(title = "Contact", class = "background_FTICR",
+#                     HTML('<h4> Contact </h4>'))
+# ),
+ tabPanel("Data Upload", 
+          wellPanel(
           fluidRow(
             column(width = 12,
-                   tags$hr(),
                    h3("Load Data"),
                    fluidRow(
                      column(width = 4, fileInput('e_data', 'Choose Data File')),
-                     # column(width = 4, fileInput('fasta', 'Choose FASTA file')),
                      column(width = 4, fileInput('f_data', 'Choose Sample Metadata File')),
                      column(width = 4, fileInput('e_meta', 'Optional, Choose Feature Metadata File'))
                    )
             )
-          ),
+          )),
+          conditionalPanel("output.fileUploaded",
 
-          # fluidRow(
-          #   column(width = 12,
-          #          tags$hr(),
-          #          h3("Specify Column Names"),
-          #          fluidRow(
-          #            column(width = 4, uiOutput("edata_cname")),
-          #            column(width = 4, uiOutput("fdata_cname")),
-          #            column(width = 4, uiOutput("taxa_cname"))
-          #          )
-          #   )
-          # ),
-          # actionButton("Upload", "Upload ze data!"),
           #-------- Guess which colnames are the proper identifiers --------#
+          wellPanel(id = "whitepanel", #make this well panel white with border
           h3("Selected Identifiers"),
           fluidRow(
             column(width = 6,
@@ -113,8 +113,8 @@ tagList(
             column(width = 6,
                    uiOutput("new_fdata_cname")
             )
+          )
           ),
-          hr(),
           h3("Data View"),
           fluidRow(
             column(width = 12, tags$table(
@@ -123,40 +123,38 @@ tagList(
                 tags$title(h4("Uploaded Data View"))
               )))
           ),
-          br(),
-          hr(),
-          h2("Taxonomic Level"),
-          uiOutput("rollup"),
-          br(),
-          hr(),
-          h2("Groupings"),
-          h3("Main Effects"),
-          # fluidRow(
-          #    column(width=3, uiOutput("group1")),
-          #    column(width=3, uiOutput("group2"))
-          #    ),
-          uiOutput("gdfMainEffect"),
-          #actionButton("covs","Add Covariates"),
-          # h3("Covariates"),
-          # fluidRow(
-          #   column(width=3, uiOutput("cov1")),
-          #   column(width=3, uiOutput("cov2"))
-          # ),
-          #uiOutput("cov1"),
-          #uiOutput("cov2"),
-          # fluidRow(
-          #   actionButton("groupDF_reset_button", label = "Reset Groupings", icon = icon("trash")),
-          #   actionButton("groupDF_go", label = "Apply Groupings", icon = icon("check"))
-          # ),
-          p("The following table shows which group each sample belongs to."),
-          DT::dataTableOutput("group_DF"),
-          br(),
-          p("The following table shows the number of samples in each group."),
-          DT::dataTableOutput("group_tab"),
-          br()
-  ),#end data upload
-
+          wellPanel(id="whitepanel",
+                    h3("Rollup and Grouping"),
+                    fluidRow(
+                      column(width = 5,
+                             h4("Taxonomic Level"),
+                             uiOutput("rollup")
+                      ),
+                      column(width = 7,
+                             h4("Required: Main Effects"),
+                             uiOutput("gdfMainEffect")
+                             )
+                             )
+                    ),
+          fluidRow(
+            column(width = 6,
+                   p("The following table shows which group each sample belongs to."),
+                   DT::dataTableOutput("group_DF")
+                   ),
+            column(width = 6,
+                   p("The following table shows the number of samples in each group."),
+                   DT::dataTableOutput("group_tab")
+                   )
+          )
+          # p("The following table shows which group each sample belongs to."),
+          # DT::dataTableOutput("group_DF"),
+          # br(),
+          # p("The following table shows the number of samples in each group."),
+          # DT::dataTableOutput("group_tab"),
+          # br()
+  )),#end data upload
 #---------------- All Filtering ----------------#
+navbarMenu("Preprocessing",
   tabPanel("Filtering",
            h3("Metadata View"),
            fluidRow(
@@ -291,8 +289,9 @@ tagList(
            ),
            uiOutput("norm_class"),
            plotlyOutput("norm_plot")
-  ),#end normalization
-
+  )#end normalization
+),#end preprocessing
+navbarMenu("Analysis",
 #---------------- Community Metrics ----------------#  
   tabPanel("Community Metrics",
            h3("Plot Parameters"),
@@ -464,8 +463,8 @@ tagList(
             label = "Submit Environmental Variables"
           ),
           withSpinner(plotOutput("na_envvars_plot"))
-          ),
-
+          )
+),#end analysis
  tabPanel("Download",
           uiOutput("files_to_download"),
           downloadButton("downloadData","Download")
