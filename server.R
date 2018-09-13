@@ -61,7 +61,10 @@ shinyServer(function(input, output, session) {
                                        e_meta_filepath = as.character(input$e_meta$datapath)))
     }
   }) #end rRNAobj import
-
+  output$fileUploaded <- reactive({
+    return(!is.null(importObj()))
+  })
+  outputOptions(output, 'fileUploaded', suspendWhenHidden=FALSE)
   # Guess at column identifiers
   output$e_data_cname <- reactive(importObj()$guessed_edata_cname)
   output$f_data_cname <- reactive(importObj()$guessed_fdata_cname)
